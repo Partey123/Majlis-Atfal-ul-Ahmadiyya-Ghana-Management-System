@@ -1,22 +1,31 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Majlis Atfal-ul-Ahmadiyya Ghana Management System API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: members
+    description: Member management
+  - name: locations
+    description: Location hierarchy
+  - name: analytics
+    description: Analytics and statistics
+  - name: graduations
+    description: Graduation tracking
+  - name: circuits
+    description: Circuit and Jama'at autocomplete
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +33,757 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # --- Members ---
+  /members:
+    get:
+      operationId: listMembers
+      tags: [members]
+      summary: List members with optional filters
+      parameters:
+        - name: wing
+          in: query
+          schema:
+            type: string
+            enum: [atfal_sughir, atfal_kabir, khuddam]
+        - name: sector
+          in: query
+          schema:
+            type: string
+        - name: region
+          in: query
+          schema:
+            type: string
+        - name: zone
+          in: query
+          schema:
+            type: string
+        - name: circuit
+          in: query
+          schema:
+            type: string
+        - name: jamaat
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: ageMin
+          in: query
+          schema:
+            type: integer
+        - name: ageMax
+          in: query
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Paginated member list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberList"
+    post:
+      operationId: createMember
+      tags: [members]
+      summary: Create a new member
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberInput"
+      responses:
+        "201":
+          description: Created member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+
+  /members/{id}:
+    get:
+      operationId: getMember
+      tags: [members]
+      summary: Get member by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Member details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateMember
+      tags: [members]
+      summary: Update member
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberUpdate"
+      responses:
+        "200":
+          description: Updated member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+    delete:
+      operationId: deleteMember
+      tags: [members]
+      summary: Delete member
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /members/{id}/history:
+    get:
+      operationId: getMemberHistory
+      tags: [members]
+      summary: Get member audit history
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: History entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MemberHistory"
+
+  # --- Locations ---
+  /locations/sectors:
+    get:
+      operationId: listSectors
+      tags: [locations]
+      summary: List all sectors
+      responses:
+        "200":
+          description: Sector list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Sector"
+
+  /locations/regions:
+    get:
+      operationId: listRegions
+      tags: [locations]
+      summary: List regions optionally filtered by sector
+      parameters:
+        - name: sector
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Region list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Region"
+
+  /locations/zones:
+    get:
+      operationId: listZones
+      tags: [locations]
+      summary: List zones optionally filtered by region
+      parameters:
+        - name: region
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Zone list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Zone"
+
+  /locations/circuits:
+    get:
+      operationId: listCircuits
+      tags: [locations]
+      summary: Autocomplete circuits (search + suggest)
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: zone
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Circuit suggestions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CircuitSuggestion"
+    post:
+      operationId: createCircuit
+      tags: [locations]
+      summary: Create a new circuit value
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CircuitInput"
+      responses:
+        "201":
+          description: Created circuit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CircuitSuggestion"
+
+  /locations/jamaats:
+    get:
+      operationId: listJamaats
+      tags: [locations]
+      summary: Autocomplete Jama'ats (search + suggest)
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: circuit
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Jama'at suggestions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/JamaatSuggestion"
+    post:
+      operationId: createJamaat
+      tags: [locations]
+      summary: Create a new Jama'at value
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JamaatInput"
+      responses:
+        "201":
+          description: Created Jama'at
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JamaatSuggestion"
+
+  # --- Analytics ---
+  /analytics/summary:
+    get:
+      operationId: getAnalyticsSummary
+      tags: [analytics]
+      summary: National overview stats
+      responses:
+        "200":
+          description: National summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsSummary"
+
+  /analytics/by-sector:
+    get:
+      operationId: getAnalyticsBySector
+      tags: [analytics]
+      summary: Member counts grouped by sector
+      responses:
+        "200":
+          description: Sector analytics
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SectorAnalytics"
+
+  /analytics/by-region:
+    get:
+      operationId: getAnalyticsByRegion
+      tags: [analytics]
+      summary: Member counts grouped by region
+      parameters:
+        - name: sector
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Region analytics
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RegionAnalytics"
+
+  /analytics/birthdays:
+    get:
+      operationId: getBirthdayAnalytics
+      tags: [analytics]
+      summary: Birthday analytics (today/week/month)
+      responses:
+        "200":
+          description: Birthday stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BirthdayAnalytics"
+
+  # --- Graduations ---
+  /graduations:
+    get:
+      operationId: listGraduations
+      tags: [graduations]
+      summary: List Khuddam graduation alerts/records
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [today, this_month, this_quarter, this_year]
+      responses:
+        "200":
+          description: Graduation records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GraduationRecord"
+
+  /graduations/upcoming:
+    get:
+      operationId: getUpcomingGraduations
+      tags: [graduations]
+      summary: Members turning 15 soon
+      responses:
+        "200":
+          description: Upcoming graduation summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpcomingGraduations"
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    # --- Member schemas ---
+    Member:
+      type: object
+      required: [id, firstName, lastName, dateOfBirth, age, wing, sector, region, zone, circuit, jamaat, createdAt]
+      properties:
+        id:
+          type: integer
+        firstName:
+          type: string
+        middleName:
+          type: ["string", "null"]
+        lastName:
+          type: string
+        dateOfBirth:
+          type: string
+          format: date
+        age:
+          type: integer
+        wing:
+          type: string
+          enum: [atfal_sughir, atfal_kabir, khuddam]
+        sector:
+          type: string
+        region:
+          type: string
+        zone:
+          type: string
+        circuit:
+          type: string
+        jamaat:
+          type: string
+        position:
+          type: ["string", "null"]
+        photoUrl:
+          type: ["string", "null"]
+        guardianName:
+          type: ["string", "null"]
+        guardianType:
+          type: ["string", "null"]
+        guardianPhone:
+          type: ["string", "null"]
+        guardianEmail:
+          type: ["string", "null"]
+        guardianAddress:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    MemberList:
+      type: object
+      required: [members, total, page, pageSize]
+      properties:
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/Member"
+        total:
+          type: integer
+        page:
+          type: integer
+        pageSize:
+          type: integer
+
+    MemberInput:
+      type: object
+      required: [firstName, lastName, dateOfBirth, sector, region, zone, circuit, jamaat]
+      properties:
+        firstName:
+          type: string
+        middleName:
+          type: string
+        lastName:
+          type: string
+        dateOfBirth:
+          type: string
+          format: date
+        sector:
+          type: string
+        region:
+          type: string
+        zone:
+          type: string
+        circuit:
+          type: string
+        jamaat:
+          type: string
+        position:
+          type: string
+        photoUrl:
+          type: string
+        guardianName:
+          type: string
+        guardianType:
+          type: string
+        guardianPhone:
+          type: string
+        guardianEmail:
+          type: string
+        guardianAddress:
+          type: string
+
+    MemberUpdate:
+      type: object
+      properties:
+        firstName:
+          type: string
+        middleName:
+          type: ["string", "null"]
+        lastName:
+          type: string
+        dateOfBirth:
+          type: string
+          format: date
+        sector:
+          type: string
+        region:
+          type: string
+        zone:
+          type: string
+        circuit:
+          type: string
+        jamaat:
+          type: string
+        position:
+          type: ["string", "null"]
+        photoUrl:
+          type: ["string", "null"]
+        guardianName:
+          type: ["string", "null"]
+        guardianType:
+          type: ["string", "null"]
+        guardianPhone:
+          type: ["string", "null"]
+        guardianEmail:
+          type: ["string", "null"]
+        guardianAddress:
+          type: ["string", "null"]
+
+    MemberHistory:
+      type: object
+      required: [id, memberId, eventType, description, createdAt]
+      properties:
+        id:
+          type: integer
+        memberId:
+          type: integer
+        eventType:
+          type: string
+        description:
+          type: string
+        previousValue:
+          type: ["string", "null"]
+        newValue:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    # --- Location schemas ---
+    Sector:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        memberCount:
+          type: integer
+
+    Region:
+      type: object
+      required: [id, name, sector]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        sector:
+          type: string
+        memberCount:
+          type: integer
+
+    Zone:
+      type: object
+      required: [id, name, region]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        region:
+          type: string
+        memberCount:
+          type: integer
+
+    CircuitSuggestion:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        zone:
+          type: ["string", "null"]
+        usageCount:
+          type: integer
+
+    CircuitInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        zone:
+          type: string
+
+    JamaatSuggestion:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        circuit:
+          type: ["string", "null"]
+        usageCount:
+          type: integer
+
+    JamaatInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        circuit:
+          type: string
+
+    # --- Analytics schemas ---
+    AnalyticsSummary:
+      type: object
+      required: [totalMembers, atfalSughirCount, atfalKabirCount, khuddamCount, newThisMonth, graduationsThisMonth]
+      properties:
+        totalMembers:
+          type: integer
+        atfalSughirCount:
+          type: integer
+        atfalKabirCount:
+          type: integer
+        khuddamCount:
+          type: integer
+        newThisMonth:
+          type: integer
+        graduationsThisMonth:
+          type: integer
+
+    SectorAnalytics:
+      type: object
+      required: [sector, totalMembers, atfalSughir, atfalKabir, khuddam]
+      properties:
+        sector:
+          type: string
+        totalMembers:
+          type: integer
+        atfalSughir:
+          type: integer
+        atfalKabir:
+          type: integer
+        khuddam:
+          type: integer
+
+    RegionAnalytics:
+      type: object
+      required: [region, sector, totalMembers, atfalSughir, atfalKabir, khuddam]
+      properties:
+        region:
+          type: string
+        sector:
+          type: string
+        totalMembers:
+          type: integer
+        atfalSughir:
+          type: integer
+        atfalKabir:
+          type: integer
+        khuddam:
+          type: integer
+
+    BirthdayAnalytics:
+      type: object
+      required: [today, thisWeek, thisMonth]
+      properties:
+        today:
+          type: array
+          items:
+            $ref: "#/components/schemas/Member"
+        thisWeek:
+          type: array
+          items:
+            $ref: "#/components/schemas/Member"
+        thisMonth:
+          type: array
+          items:
+            $ref: "#/components/schemas/Member"
+
+    # --- Graduation schemas ---
+    GraduationRecord:
+      type: object
+      required: [id, memberId, memberName, zone, region, graduatedAt, previousWing, newWing]
+      properties:
+        id:
+          type: integer
+        memberId:
+          type: integer
+        memberName:
+          type: string
+        zone:
+          type: string
+        region:
+          type: string
+        sector:
+          type: string
+        graduatedAt:
+          type: string
+          format: date-time
+        previousWing:
+          type: string
+        newWing:
+          type: string
+
+    UpcomingGraduations:
+      type: object
+      required: [thisMonth, thisQuarter, thisYear]
+      properties:
+        thisMonth:
+          type: array
+          items:
+            $ref: "#/components/schemas/Member"
+        thisQuarter:
+          type: array
+          items:
+            $ref: "#/components/schemas/Member"
+        thisYear:
+          type: array
+          items:
+            $ref: "#/components/schemas/Member"

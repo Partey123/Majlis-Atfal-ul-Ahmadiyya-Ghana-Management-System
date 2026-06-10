@@ -1,0 +1,551 @@
+# Majlis Atfal-ul-Ahmadiyya Ghana Management System
+
+## Project Overview
+
+Build a modern, mobile-first management system for Majlis Atfal-ul-Ahmadiyya Ghana.
+
+The system should provide complete member management, location management, analytics, reporting, and automated lifecycle management for Atfal members across Ghana.
+
+This is not a financial management system. The primary focus is member records, administration, growth tracking, and analytics.
+
+The application should feel modern, fast, clean, and professional, similar to Notion, Linear, Stripe Dashboard, Airtable, or Apple's design philosophy.
+
+---
+
+# Core Objectives
+
+The platform must allow:
+
+* Full CRUD operations for members
+* Location hierarchy management
+* Member search and filtering
+* Automatic age calculation
+* Automatic birthday updates
+* Automatic wing classification
+* Automatic graduation between wings
+* Graduation alerts for Khuddam transitions
+* National, Regional, Zonal, Circuit, and Jama'at analytics
+* Excel and PDF exports
+* Mobile-first responsive experience
+* Offline-friendly data entry where possible
+
+---
+
+# Membership Structure
+
+The system manages only three classifications.
+
+## Atfal Sughir
+
+Age:
+7–11 years
+
+## Atfal Kabir
+
+Age:
+12–14 years
+
+## Khuddam
+
+Age:
+15 years and above
+
+---
+
+# Automatic Age Engine
+
+Age must never be manually entered.
+
+The system calculates age from Date of Birth.
+
+Every day:
+
+* Recalculate member age
+* Update age badges
+* Update wing classification
+
+Example:
+
+DOB: 10 June 2014
+
+Current Date: 10 June 2026
+
+Age: 12
+
+Wing:
+Atfal Kabir
+
+---
+
+# Automatic Graduation Rules
+
+The system automatically moves members between wings.
+
+## Sughir → Kabir
+
+When member turns 12:
+
+Automatically change wing from:
+
+Atfal Sughir
+
+to
+
+Atfal Kabir
+
+No notification required.
+
+---
+
+## Kabir → Khuddam
+
+When member turns 15:
+
+Automatically change wing from:
+
+Atfal Kabir
+
+to
+
+Khuddam
+
+Create system notification.
+
+Create graduation record.
+
+Display in graduation dashboard.
+
+National, Regional, and Zonal administrators should see graduation alerts.
+
+---
+
+# Location Structure
+
+The hierarchy is:
+
+National
+→ Sector
+→ Region
+→ Zone
+→ Circuit
+→ Jama'at
+→ Member
+
+---
+
+# Sectors
+
+## Northern Sector
+
+* Northern
+* Upper East
+* Upper West
+
+## Middle Sector
+
+* Ashanti
+* Brong Ahafo
+* Eastern
+
+## Southern Sector
+
+* Greater Accra
+* Central East
+* Central West
+* Volta
+* Western
+
+---
+
+# Regions & Zones
+
+## Ashanti
+
+* Amansie
+* Denkyira
+* Kumasi North
+* Kumasi South
+* Obuasi
+* Oforikrom
+* Sefwi
+* Sekyere East
+* Sekyere West
+
+## Brong Ahafo
+
+* Sunyani
+* Techiman
+
+## Central East
+
+* Agona Zone
+* Assikuma Bedum
+* Essiam Zone
+* Gomoa East
+* Gomoa West
+
+## Central West
+
+* Abura
+* Assin
+* Cape Coast
+* Ekumfi
+* Mankessim
+* Saltpond
+* Twifo
+
+## Eastern
+
+* Akim Oda
+* Koforidua
+* Nkawkaw
+
+## Greater Accra
+
+* Accra
+* Kasoa
+* Tema
+
+## Northern
+
+* Damongo
+* Tamale
+* Yendi
+
+## Upper East
+
+* Bolga
+* Nalerigu
+* Walewale
+
+## Upper West
+
+* Goripie
+* Gurungu/Kalba
+* Hamile
+* Tumu
+* Wa East
+* Wa West
+
+## Volta
+
+* Volta
+
+## Western
+
+* Sekondi
+* Takoradi
+* Tarkwa
+
+---
+
+# Member Creation Wizard
+
+## Step 1 — Personal Information
+
+Fields:
+
+* First Name
+* Middle Name
+* Last Name
+* Date of Birth
+* Profile Photo
+
+Automatically Display:
+
+* Age
+* Wing Classification
+
+---
+
+## Step 2 — Administrative Information
+
+Fields:
+
+* Sector
+* Region
+* Zone
+* Circuit
+* Jama'at
+* Position
+
+Sector, Region, and Zone are dropdowns.
+
+Circuit and Jama'at are smart searchable inputs.
+
+Example:
+
+User types:
+
+"Ahi"
+
+Suggestions appear:
+
+* Ahinsan
+* Ahinsan Estate
+* Ahinsan Central
+
+If no match exists:
+
+Create new Circuit or Jama'at automatically.
+
+Future users can reuse the newly created value.
+
+---
+
+## Step 3 — Parent / Guardian Information
+
+Fields:
+
+* Parent/Guardian Name
+* Type of Guardian
+* Phone Number
+* Additional Phone Numbers
+* Email
+* Residential Address
+
+Guardian Types:
+
+* Father
+* Mother
+* Uncle
+* Aunt
+* Grandparent
+* Brother
+* Sister
+* Other
+
+---
+
+## Step 4 — Review & Create
+
+Review all information.
+
+Create Member.
+
+---
+
+# Member Profile
+
+Each member should have:
+
+## Overview
+
+* Profile
+* Age
+* Wing
+* Location
+* Guardian
+
+## History
+
+Tracks:
+
+* Membership changes
+* Wing changes
+* Graduation records
+* Location transfers
+
+## Documents
+
+Upload:
+
+* Birth Certificate
+* Passport Photo
+* Other Attachments
+
+---
+
+# Location Management Module
+
+Administrators can manage:
+
+* Sectors
+* Regions
+* Zones
+* Circuits
+* Jama'ats
+
+Support:
+
+* Create
+* Edit
+* Archive
+* Search
+
+---
+
+# Advanced Filtering
+
+Members should be filterable by:
+
+* Wing
+* Age
+* Sector
+* Region
+* Zone
+* Circuit
+* Jama'at
+* Date Created
+* Graduation Status
+
+Examples:
+
+Show all Atfal Kabir in Kumasi South.
+
+Show all members turning 15 this year.
+
+Show all members in Ashanti Region.
+
+---
+
+# Analytics Dashboard
+
+## National Overview
+
+Cards:
+
+* Total Members
+* Atfal Sughir
+* Atfal Kabir
+* Khuddam
+* New Members This Month
+* Graduations To Khuddam
+
+---
+
+## Sector Analytics
+
+View statistics by:
+
+* Northern
+* Middle
+* Southern
+
+---
+
+## Regional Analytics
+
+Display:
+
+* Member Count
+* Growth Rate
+* Age Distribution
+* Wing Distribution
+
+---
+
+## Zone Analytics
+
+Display:
+
+* Total Members
+* Largest Jama'at
+* Growth Trend
+
+---
+
+## Graduation Analytics
+
+Display:
+
+* Turning 15 This Month
+* Turning 15 This Quarter
+* Turning 15 This Year
+
+Exportable lists.
+
+---
+
+## Birthday Analytics
+
+Display:
+
+* Birthdays Today
+* Birthdays This Week
+* Birthdays This Month
+
+---
+
+# Search System
+
+Global search must search:
+
+* Member Name
+* Guardian Name
+* Circuit
+* Jama'at
+* Region
+* Zone
+
+Instant results.
+
+---
+
+# Reporting
+
+Export by:
+
+* National
+* Sector
+* Region
+* Zone
+* Circuit
+* Jama'at
+
+Formats:
+
+* PDF
+* Excel
+* CSV
+
+Reports:
+
+* Full Member Directory
+* Atfal Sughir List
+* Atfal Kabir List
+* Khuddam Graduations
+* Birthday Reports
+* Regional Reports
+* Zone Reports
+
+---
+
+# User Roles
+
+## National Admin
+
+Full access.
+
+## Regional Admin
+
+Manage assigned region.
+
+## Zonal Admin
+
+Manage assigned zone.
+
+## Circuit Admin
+
+Manage assigned circuit.
+
+## Read Only User
+
+View reports and analytics only.
+
+---
+
+# Design Requirements
+
+* Mobile-first
+* Responsive
+* Modern dashboard
+* Clean Apple-inspired design
+* Fast filtering
+* Dark mode
+* Light mode
+* Touch-friendly interfaces
+* Beautiful charts and analytics
+* Production-ready architecture
+
+The system should be designed to scale nationally and become the central member management platform for Majlis Atfal-ul-Ahmadiyya Ghana.

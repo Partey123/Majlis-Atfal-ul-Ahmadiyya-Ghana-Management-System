@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Majlis Atfal Ghana"
+version = "1.0.0"
+id = "artifacts/atfal-ghana"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22395
+
+[services.development]
+run = "pnpm --filter @workspace/atfal-ghana run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/atfal-ghana", "run", "build" ]
+publicDir = "artifacts/atfal-ghana/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22395"
+BASE_PATH = "/"
