@@ -1,0 +1,3 @@
+- [Workspace rename node_modules](workspace-rename-node_modules.md) — after renaming a pnpm workspace package directory, node_modules must be wiped and reinstalled or symlinks break silently.
+- [Tsconfig base path](tsconfig-base-path.md) — packages at depth 1 (`frontend/`, `backend/`) extend `../tsconfig.base.json`; packages at depth 2 (`artifacts/foo/`) used `../../`. Don't confuse them.
+- [Auth architecture](auth-architecture.md) — JWT in HTTP-only cookie `atfal_session`; render-guard pattern (not redirect); healthz exempt via path check in requireAuth.
