@@ -1,9 +1,8 @@
 import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, Users, GraduationCap, BarChart3, Map,
-  Moon, Sun, UserPlus, Settings, LogOut, User, Menu,
+  Moon, Sun, UserPlus, Settings, LogOut, User,
 } from "lucide-react";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -13,9 +12,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAppContext } from "@/context/AppContext";
 import { cn } from "@/lib/utils";
+import atfalLogo from "/atfal-logo.png";
 
 const navigation = [
   { name: "Dashboard",   href: "/",            icon: LayoutDashboard },
@@ -75,8 +74,12 @@ function AvatarButton({ size = "md" }: { size?: "sm" | "md" }) {
 function Brand() {
   return (
     <div className="flex items-center gap-2.5 shrink-0">
-      <div className="h-8 w-8 rounded-lg bg-[hsl(43,90%,50%)] flex items-center justify-center shadow">
-        <span className="text-[hsl(142,60%,15%)] font-black text-sm leading-none">M</span>
+      <div className="h-8 w-8 rounded-lg bg-white flex items-center justify-center shadow overflow-hidden">
+        <img
+          src={atfalLogo}
+          alt="Majlis Atfal"
+          className="h-6 w-6 object-contain dark:invert"
+        />
       </div>
       <div className="leading-tight">
         <p className="font-bold text-sm tracking-tight">Majlis Atfal</p>
@@ -106,36 +109,18 @@ function SideNavItem({ item, active }: { item: (typeof navigation)[0]; active: b
   );
 }
 
-/* ── Sheet nav item (mobile drawer) ── */
-function DrawerNavItem({ item, active, onClose }: { item: (typeof navigation)[0]; active: boolean; onClose: () => void }) {
-  return (
-    <Link href={item.href} onClick={onClose}>
-      <div className={cn(
-        "flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-150 cursor-pointer select-none",
-        active
-          ? "bg-primary/10 text-primary font-semibold"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground",
-      )}>
-        <item.icon className="shrink-0 h-5 w-5" />
-        <span className="text-sm">{item.name}</span>
-      </div>
-    </Link>
-  );
-}
-
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { theme, toggleTheme } = useAppContext();
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const isActive = useActiveNav(location);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-screen flex flex-col overflow-hidden bg-background">
 
       {/* ══════════════════════════════════════
-          TOP NAVBAR — visible on all screens
+          TOP NAVBAR — fixed height, never scrolls
           ══════════════════════════════════════ */}
-      <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur-sm">
+      <header className="shrink-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur-sm">
         <div className="flex items-center h-14 px-4 gap-4 max-w-screen-2xl mx-auto">
 
           {/* Brand */}
@@ -185,69 +170,20 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </Button>
 
-            {/* Avatar dropdown */}
+            {/* Avatar dropdown — all screens */}
             <AvatarButton size="sm" />
-
-            {/* ── Mobile hamburger (< md) ── */}
-            <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-              <SheetTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="md:hidden h-8 w-8 text-muted-foreground"
-                >
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-72 p-0 flex flex-col">
-                {/* Drawer header */}
-                <div className="flex items-center px-5 py-5 border-b border-border">
-                  <Brand />
-                </div>
-                {/* Drawer nav */}
-                <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-                  {navigation.map((item) => (
-                    <DrawerNavItem
-                      key={item.name}
-                      item={item}
-                      active={isActive(item.href)}
-                      onClose={() => setDrawerOpen(false)}
-                    />
-                  ))}
-                </nav>
-                {/* Drawer footer */}
-                <div className="border-t border-border p-4 flex items-center gap-2">
-                  <Link href="/members/new" className="flex-1" onClick={() => setDrawerOpen(false)}>
-                    <Button
-                      size="sm"
-                      className="w-full bg-[hsl(43,90%,50%)] hover:bg-[hsl(43,90%,44%)] text-[hsl(142,60%,15%)] font-semibold h-9 text-xs gap-1.5 rounded-lg"
-                    >
-                      <UserPlus className="h-3.5 w-3.5" />
-                      Add Member
-                    </Button>
-                  </Link>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={toggleTheme}
-                    className="h-9 w-9 shrink-0 rounded-lg"
-                  >
-                    {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                  </Button>
-                </div>
-              </SheetContent>
-            </Sheet>
           </div>
         </div>
       </header>
 
       {/* ══════════════════════════════════════
-          BODY — sidebar (md only) + content
+          BODY — fills remaining height, only
+          the main column scrolls internally
           ══════════════════════════════════════ */}
-      <div className="flex flex-1 overflow-hidden max-w-screen-2xl mx-auto w-full">
+      <div className="flex flex-1 min-h-0 max-w-screen-2xl mx-auto w-full">
 
-        {/* ── Medium-screen sidebar: nav items only ── */}
-        <aside className="hidden md:flex lg:hidden w-56 shrink-0 flex-col bg-sidebar border-r border-white/10">
+        {/* ── Medium-screen sidebar: nav items only, never scrolls ── */}
+        <aside className="hidden md:flex lg:hidden w-56 shrink-0 flex-col bg-sidebar border-r border-white/10 overflow-y-auto">
           <nav className="px-3 py-4 space-y-0.5">
             {navigation.map((item) => (
               <SideNavItem key={item.name} item={item} active={isActive(item.href)} />
@@ -255,7 +191,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </nav>
         </aside>
 
-        {/* ── Main content ── */}
+        {/* ── Main content: this is the only scrolling region ── */}
         <main className="flex-1 overflow-y-auto">
           <div className="p-4 md:p-6 lg:p-8 pb-24 md:pb-8 max-w-7xl mx-auto w-full">
             {children}
@@ -264,9 +200,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* ══════════════════════════════════════
-          MOBILE BOTTOM NAV
+          MOBILE BOTTOM NAV — no hamburger needed
           ══════════════════════════════════════ */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-background/95 backdrop-blur-sm border-t border-border">
+      <nav className="md:hidden shrink-0 z-50 bg-background/95 backdrop-blur-sm border-t border-border">
         <div className="grid grid-cols-5 h-16">
           {navigation.map((item) => {
             const active = isActive(item.href);
