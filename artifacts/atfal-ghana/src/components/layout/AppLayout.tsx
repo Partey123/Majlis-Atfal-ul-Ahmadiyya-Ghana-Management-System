@@ -1,8 +1,9 @@
 import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, Users, GraduationCap, BarChart3, Map,
-  Moon, Sun, UserPlus, ChevronRight, Settings, LogOut, User,
+  Moon, Sun, UserPlus, Settings, LogOut, User, Menu,
 } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,6 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAppContext } from "@/context/AppContext";
 import { cn } from "@/lib/utils";
 
@@ -23,32 +25,9 @@ const navigation = [
   { name: "Locations",   href: "/locations",    icon: Map             },
 ];
 
-function NavItem({
-  item,
-  active,
-}: {
-  item: (typeof navigation)[0];
-  active: boolean;
-}) {
-  return (
-    <Link href={item.href}>
-      <div
-        className={cn(
-          "group relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 cursor-pointer select-none",
-          active
-            ? "bg-white/15 text-white font-semibold shadow-sm"
-            : "text-white/70 hover:bg-white/10 hover:text-white",
-        )}
-      >
-        {active && (
-          <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-1 rounded-r-full bg-[hsl(43,90%,50%)]" />
-        )}
-        <item.icon className="shrink-0 h-5 w-5 group-hover:scale-110 transition-transform" />
-        <span className="text-sm tracking-tight flex-1">{item.name}</span>
-        {active && <ChevronRight className="h-3.5 w-3.5 text-white/40" />}
-      </div>
-    </Link>
-  );
+function useActiveNav(location: string) {
+  return (href: string) =>
+    href === location || (href !== "/" && location.startsWith(href));
 }
 
 function AvatarButton({ size = "md" }: { size?: "sm" | "md" }) {
@@ -58,7 +37,7 @@ function AvatarButton({ size = "md" }: { size?: "sm" | "md" }) {
       <DropdownMenuTrigger asChild>
         <button
           className={cn(
-            "rounded-full bg-[hsl(43,90%,50%)] flex items-center justify-center font-bold text-[hsl(142,60%,15%)] shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
+            "rounded-full bg-[hsl(43,90%,50%)] flex items-center justify-center font-bold text-[hsl(142,60%,15%)] shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
             size === "sm" ? "h-8 w-8 text-xs" : "h-9 w-9 text-sm"
           )}
         >
@@ -80,10 +59,7 @@ function AvatarButton({ size = "md" }: { size?: "sm" | "md" }) {
           <Settings className="h-4 w-4" /> Settings
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          className="gap-2 cursor-pointer"
-          onClick={toggleTheme}
-        >
+        <DropdownMenuItem className="gap-2 cursor-pointer" onClick={toggleTheme}>
           {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           {theme === "dark" ? "Light mode" : "Dark mode"}
         </DropdownMenuItem>
@@ -96,140 +72,223 @@ function AvatarButton({ size = "md" }: { size?: "sm" | "md" }) {
   );
 }
 
+function Brand() {
+  return (
+    <div className="flex items-center gap-2.5 shrink-0">
+      <div className="h-8 w-8 rounded-lg bg-[hsl(43,90%,50%)] flex items-center justify-center shadow">
+        <span className="text-[hsl(142,60%,15%)] font-black text-sm leading-none">M</span>
+      </div>
+      <div className="leading-tight">
+        <p className="font-bold text-sm tracking-tight">Majlis Atfal</p>
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground leading-tight">Ghana</p>
+      </div>
+    </div>
+  );
+}
+
+/* ── Sidebar nav item (medium screens) ── */
+function SideNavItem({ item, active }: { item: (typeof navigation)[0]; active: boolean }) {
+  return (
+    <Link href={item.href}>
+      <div className={cn(
+        "group relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 cursor-pointer select-none",
+        active
+          ? "bg-white/15 text-white font-semibold shadow-sm"
+          : "text-white/65 hover:bg-white/10 hover:text-white",
+      )}>
+        {active && (
+          <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-1 rounded-r-full bg-[hsl(43,90%,50%)]" />
+        )}
+        <item.icon className="shrink-0 h-5 w-5 group-hover:scale-110 transition-transform" />
+        <span className="text-sm tracking-tight">{item.name}</span>
+      </div>
+    </Link>
+  );
+}
+
+/* ── Sheet nav item (mobile drawer) ── */
+function DrawerNavItem({ item, active, onClose }: { item: (typeof navigation)[0]; active: boolean; onClose: () => void }) {
+  return (
+    <Link href={item.href} onClick={onClose}>
+      <div className={cn(
+        "flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-150 cursor-pointer select-none",
+        active
+          ? "bg-primary/10 text-primary font-semibold"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground",
+      )}>
+        <item.icon className="shrink-0 h-5 w-5" />
+        <span className="text-sm">{item.name}</span>
+      </div>
+    </Link>
+  );
+}
+
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { theme, toggleTheme } = useAppContext();
-
-  const currentNav = navigation.find(
-    (n) => n.href === location || (n.href !== "/" && location.startsWith(n.href)),
-  );
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const isActive = useActiveNav(location);
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-background flex flex-col">
 
-      {/* ── Desktop Sidebar ── */}
-      <aside className="hidden md:flex w-60 flex-col fixed inset-y-0 z-50 bg-sidebar border-r border-white/10 shadow-xl shadow-black/20">
+      {/* ══════════════════════════════════════
+          TOP NAVBAR — visible on all screens
+          ══════════════════════════════════════ */}
+      <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur-sm">
+        <div className="flex items-center h-14 px-4 gap-4 max-w-screen-2xl mx-auto">
 
-        {/* Brand */}
-        <div className="px-5 pt-6 pb-4 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-[hsl(43,90%,50%)] flex items-center justify-center shrink-0 shadow">
-              <span className="text-[hsl(142,60%,15%)] font-black text-sm leading-none">M</span>
-            </div>
-            <div>
-              <p className="text-white font-bold text-sm leading-tight tracking-tight">Majlis Atfal</p>
-              <p className="text-white/50 text-[10px] font-semibold uppercase tracking-widest leading-tight">Ghana</p>
-            </div>
-          </div>
-        </div>
+          {/* Brand */}
+          <Brand />
 
-        <div className="mx-4 h-px bg-white/10 mb-3 shrink-0" />
+          {/* ── Large screen: nav links inline ── */}
+          <nav className="hidden lg:flex items-center gap-1 ml-6">
+            {navigation.map((item) => (
+              <Link key={item.name} href={item.href}>
+                <div className={cn(
+                  "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer",
+                  isActive(item.href)
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted",
+                )}>
+                  <item.icon className="h-4 w-4" />
+                  {item.name}
+                </div>
+              </Link>
+            ))}
+          </nav>
 
-        <p className="px-5 text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-1 shrink-0">
-          Navigation
-        </p>
+          {/* Spacer */}
+          <div className="flex-1" />
 
-        {/* Nav links — no overflow, never scrolls */}
-        <nav className="px-3 space-y-0.5 pb-4 shrink-0">
-          {navigation.map((item) => {
-            const active = item.href === location || (item.href !== "/" && location.startsWith(item.href));
-            return <NavItem key={item.name} item={item} active={active} />;
-          })}
-        </nav>
-
-        {/* Spacer */}
-        <div className="flex-1" />
-
-        {/* Footer */}
-        <div className="mx-4 h-px bg-white/10 shrink-0" />
-        <div className="p-4 flex items-center gap-2 shrink-0">
-          <Link href="/members/new" className="flex-1">
-            <Button
-              size="sm"
-              className="w-full bg-[hsl(43,90%,50%)] hover:bg-[hsl(43,90%,44%)] text-[hsl(142,60%,15%)] font-semibold h-8 text-xs gap-1.5 shadow-none rounded-lg"
-            >
-              <UserPlus className="h-3.5 w-3.5" />
-              Add Member
-            </Button>
-          </Link>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleTheme}
-            className="h-8 w-8 shrink-0 text-white/60 hover:text-white hover:bg-white/10 rounded-lg"
-            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          >
-            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </Button>
-          <AvatarButton />
-        </div>
-      </aside>
-
-      {/* ── Content Area ── */}
-      <div className="flex-1 md:ml-60 flex flex-col min-h-screen">
-
-        {/* Mobile Top Header — fixed, never scrolls */}
-        <header className="md:hidden sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border flex items-center justify-between px-4 h-14 gap-3 shrink-0">
+          {/* ── Right-side controls ── */}
           <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-md bg-sidebar flex items-center justify-center shrink-0">
-              <span className="text-[hsl(43,90%,50%)] font-black text-xs">M</span>
-            </div>
-            <p className="text-sm font-bold leading-tight">{currentNav?.name ?? "Majlis Atfal"}</p>
-          </div>
-          <div className="flex items-center gap-2">
+            {/* Add Member — shown md+ */}
+            <Link href="/members/new" className="hidden md:block">
+              <Button
+                size="sm"
+                className="bg-[hsl(43,90%,50%)] hover:bg-[hsl(43,90%,44%)] text-[hsl(142,60%,15%)] font-semibold h-8 text-xs gap-1.5 rounded-lg shadow-none"
+              >
+                <UserPlus className="h-3.5 w-3.5" />
+                Add Member
+              </Button>
+            </Link>
+
+            {/* Theme toggle — shown md+ */}
             <Button
               variant="ghost"
               size="icon"
               onClick={toggleTheme}
-              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+              className="hidden md:flex h-8 w-8 text-muted-foreground hover:text-foreground rounded-lg"
+              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             >
               {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </Button>
-            <Link href="/members/new">
-              <Button
-                size="sm"
-                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-8 text-xs gap-1 rounded-lg px-3"
-              >
-                <UserPlus className="h-3.5 w-3.5" />
-                Add
-              </Button>
-            </Link>
-            <AvatarButton size="sm" />
-          </div>
-        </header>
 
-        {/* Main Content */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 pb-24 md:pb-8">
-          <div className="max-w-7xl mx-auto w-full">
+            {/* Avatar dropdown */}
+            <AvatarButton size="sm" />
+
+            {/* ── Mobile hamburger (< md) ── */}
+            <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
+              <SheetTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="md:hidden h-8 w-8 text-muted-foreground"
+                >
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-72 p-0 flex flex-col">
+                {/* Drawer header */}
+                <div className="flex items-center px-5 py-5 border-b border-border">
+                  <Brand />
+                </div>
+                {/* Drawer nav */}
+                <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+                  {navigation.map((item) => (
+                    <DrawerNavItem
+                      key={item.name}
+                      item={item}
+                      active={isActive(item.href)}
+                      onClose={() => setDrawerOpen(false)}
+                    />
+                  ))}
+                </nav>
+                {/* Drawer footer */}
+                <div className="border-t border-border p-4 flex items-center gap-2">
+                  <Link href="/members/new" className="flex-1" onClick={() => setDrawerOpen(false)}>
+                    <Button
+                      size="sm"
+                      className="w-full bg-[hsl(43,90%,50%)] hover:bg-[hsl(43,90%,44%)] text-[hsl(142,60%,15%)] font-semibold h-9 text-xs gap-1.5 rounded-lg"
+                    >
+                      <UserPlus className="h-3.5 w-3.5" />
+                      Add Member
+                    </Button>
+                  </Link>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={toggleTheme}
+                    className="h-9 w-9 shrink-0 rounded-lg"
+                  >
+                    {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+        </div>
+      </header>
+
+      {/* ══════════════════════════════════════
+          BODY — sidebar (md only) + content
+          ══════════════════════════════════════ */}
+      <div className="flex flex-1 overflow-hidden max-w-screen-2xl mx-auto w-full">
+
+        {/* ── Medium-screen sidebar: nav items only ── */}
+        <aside className="hidden md:flex lg:hidden w-56 shrink-0 flex-col bg-sidebar border-r border-white/10">
+          <nav className="px-3 py-4 space-y-0.5">
+            {navigation.map((item) => (
+              <SideNavItem key={item.name} item={item} active={isActive(item.href)} />
+            ))}
+          </nav>
+        </aside>
+
+        {/* ── Main content ── */}
+        <main className="flex-1 overflow-y-auto">
+          <div className="p-4 md:p-6 lg:p-8 pb-24 md:pb-8 max-w-7xl mx-auto w-full">
             {children}
           </div>
         </main>
-
-        {/* Mobile Bottom Nav */}
-        <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-background/95 backdrop-blur-sm border-t border-border">
-          <div className="grid grid-cols-5 h-16">
-            {navigation.map((item) => {
-              const active = item.href === location || (item.href !== "/" && location.startsWith(item.href));
-              return (
-                <Link key={item.name} href={item.href}>
-                  <div className={cn(
-                    "flex flex-col items-center justify-center h-full gap-1 transition-colors relative",
-                    active ? "text-primary" : "text-muted-foreground",
-                  )}>
-                    {active && (
-                      <span className="absolute top-0 inset-x-3 h-0.5 rounded-b-full bg-primary" />
-                    )}
-                    <item.icon className={cn("h-5 w-5 transition-transform", active && "scale-110")} />
-                    <span className={cn("text-[10px] font-medium leading-none", active ? "text-primary" : "text-muted-foreground/70")}>
-                      {item.name === "Graduations" ? "Grad." : item.name}
-                    </span>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </nav>
       </div>
+
+      {/* ══════════════════════════════════════
+          MOBILE BOTTOM NAV
+          ══════════════════════════════════════ */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-background/95 backdrop-blur-sm border-t border-border">
+        <div className="grid grid-cols-5 h-16">
+          {navigation.map((item) => {
+            const active = isActive(item.href);
+            return (
+              <Link key={item.name} href={item.href}>
+                <div className={cn(
+                  "flex flex-col items-center justify-center h-full gap-1 transition-colors relative",
+                  active ? "text-primary" : "text-muted-foreground",
+                )}>
+                  {active && (
+                    <span className="absolute top-0 inset-x-3 h-0.5 rounded-b-full bg-primary" />
+                  )}
+                  <item.icon className={cn("h-5 w-5 transition-transform", active && "scale-110")} />
+                  <span className={cn("text-[10px] font-medium leading-none", active ? "text-primary" : "text-muted-foreground/70")}>
+                    {item.name === "Graduations" ? "Grad." : item.name}
+                  </span>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }
