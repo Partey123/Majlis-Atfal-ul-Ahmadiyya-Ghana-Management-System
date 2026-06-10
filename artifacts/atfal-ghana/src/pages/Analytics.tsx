@@ -118,6 +118,8 @@ export default function Analytics() {
             <CardContent>
               {loadingSector ? (
                 <Skeleton className="h-[280px] w-full" />
+              ) : !chartData || chartData.length === 0 ? (
+                <div className="h-[280px] flex items-center justify-center text-muted-foreground text-sm">No data available</div>
               ) : (
                 <div className="h-[280px]">
                   <ResponsiveContainer width="100%" height="100%">
