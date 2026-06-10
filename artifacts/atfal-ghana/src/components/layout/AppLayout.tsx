@@ -74,11 +74,12 @@ function AvatarButton({ size = "md" }: { size?: "sm" | "md" }) {
 function Brand() {
   return (
     <div className="flex items-center gap-2.5 shrink-0">
-      <div className="h-8 w-8 rounded-lg bg-white flex items-center justify-center shadow overflow-hidden">
+      <div className="h-8 w-8 rounded-lg flex items-center justify-center overflow-hidden bg-white dark:bg-white shadow-sm">
         <img
           src={atfalLogo}
           alt="Majlis Atfal"
-          className="h-6 w-6 object-contain dark:invert"
+          className="h-6 w-6 object-contain"
+          style={{ filter: "none" }}
         />
       </div>
       <div className="leading-tight">

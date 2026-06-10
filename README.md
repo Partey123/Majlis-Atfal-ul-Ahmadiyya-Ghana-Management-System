@@ -15,8 +15,10 @@ A full-stack member management system for tracking Atfal members, location hiera
 - [Development](#development)
 - [Database](#database)
 - [API Reference](#api-reference)
+- [Security](#security)
 - [Wing Assignment Logic](#wing-assignment-logic)
 - [Deployment](#deployment)
+- [Supabase Migration](#supabase-migration)
 - [Scripts](#scripts)
 
 ---
@@ -30,6 +32,7 @@ This application manages:
 - **Location Hierarchy** — Sector → Region → Zone → Circuit → Jama'at
 - **Graduation Tracking** — records when members age into the next wing; audit history preserved
 - **Analytics** — national dashboard, sector breakdowns, upcoming graduation alerts, birthday tracking
+- **Photo Upload** — member photos uploaded via `POST /api/upload/photo`, stored locally (swap for Supabase Storage in production)
 
 ---
 
@@ -39,9 +42,11 @@ This application manages:
 |---|---|
 | Frontend | React 19, Vite 7, Tailwind CSS 4, Radix UI, Wouter, TanStack Query |
 | Backend | Node.js 24, Express 5, Pino (structured logging) |
+| Security | Helmet (security headers), express-rate-limit, CORS origin allowlist, express-async-errors |
 | Database | PostgreSQL 16, Drizzle ORM, drizzle-kit |
-| Validation | Zod, drizzle-zod |
+| Validation | Zod, drizzle-zod (boot-time env validation + runtime request validation) |
 | API Contract | OpenAPI 3.1 (source of truth), Orval (code generation) |
+| File Uploads | Multer (disk storage locally; swap for Supabase Storage in production) |
 | Package Manager | pnpm (workspaces) |
 | Language | TypeScript throughout |
 
@@ -53,17 +58,42 @@ This application manages:
 .
 ├── artifacts/
 │   ├── atfal-ghana/          # React frontend (Vite, port 5000)
+│   │   └── src/
+│   │       ├── components/
+│   │       │   ├── ErrorBoundary.tsx   # React error boundary
+│   │       │   └── layout/AppLayout.tsx
+│   │       └── App.tsx
 │   ├── api-server/           # Express REST API (port 3000)
+│   │   └── src/
+│   │       ├── lib/
+│   │       │   ├── env.ts      # Boot-time env validation (Zod)
+│   │       │   └── logger.ts   # Pino logger
+│   │       ├── middlewares/
+│   │       │   └── errorHandler.ts  # Global error handler
+│   │       └── routes/
+│   │           └── uploads.ts  # Photo upload endpoint
 │   └── mockup-sandbox/       # UI component sandbox (development only)
 ├── lib/
 │   ├── db/                   # Drizzle schema + database client
+│   │   └── src/schema/
+│   │       └── members.ts    # Members table + 10 performance indexes
 │   ├── api-spec/             # OpenAPI 3.1 spec (openapi.yaml) + Orval config
 │   ├── api-zod/              # Zod schemas generated from OpenAPI spec
 │   └── api-client-react/     # TanStack Query hooks generated from OpenAPI spec
+├── supabase/
+│   ├── docs/                 # Full Supabase migration documentation
+│   │   ├── README.md
+│   │   ├── local-setup.md
+│   │   ├── schema-migration.md
+│   │   ├── auth-setup.md
+│   │   ├── storage-setup.md
+│   │   ├── backend-migration.md
+│   │   ├── hosting.md
+│   │   └── environment-variables.md
+│   └── migrations/           # SQL migration files
 ├── scripts/
 │   └── post-merge.sh         # Runs after branch merges (install + db push)
-├── supabase/
-│   └── migrations/           # Legacy migration files (historical reference)
+├── .env.example              # Environment variable template
 ├── pnpm-workspace.yaml       # Workspace + catalog dependency versions
 └── package.json              # Root scripts (build, typecheck)
 ```
@@ -85,22 +115,38 @@ This application manages:
 
 - **Node.js** `>= 24`
 - **pnpm** `>= 10` — install via `npm install -g pnpm`
-- **PostgreSQL** `>= 16` — local install, Docker, or a hosted instance (e.g. Neon, Supabase, Railway)
+- **PostgreSQL** `>= 16` — local install, Docker, Supabase local stack, or hosted instance
 
 ---
 
 ## Environment Variables
 
-Create a `.env` file in the **root** of the repository (or set these in your environment):
+Copy the template and fill in your values:
 
-```env
-# Required — PostgreSQL connection string
-DATABASE_URL=postgresql://user:password@localhost:5432/atfal_ghana
+```bash
+cp .env.example .env.local
 ```
 
-The database connection is consumed by `lib/db` and `drizzle-kit`. No other secrets are required for local development.
+### Required variables
 
-> **Note:** Individual `artifacts/` packages read `PORT` and `BASE_PATH` at startup — these are passed by the workflow commands below and do not need to be in `.env`.
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `PORT` | API server port (use `3000`) |
+
+### Optional / production variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `NODE_ENV` | `development` | `development` or `production` |
+| `ALLOWED_ORIGIN` | `*` | CORS origin(s) — lock this to your domain in production |
+| `LOG_LEVEL` | `info` | Pino log level |
+| `SUPABASE_URL` | — | Required when using Supabase features |
+| `SUPABASE_SERVICE_ROLE_KEY` | — | Supabase admin key — server only, never expose to browser |
+| `SUPABASE_ANON_KEY` | — | Supabase public key |
+| `STORAGE_BUCKET` | `member-photos` | Supabase Storage bucket name |
+
+See [`supabase/docs/environment-variables.md`](./supabase/docs/environment-variables.md) for the full reference and Supabase-specific variables.
 
 ---
 
@@ -117,11 +163,11 @@ pnpm install
 # 3. Set your database URL
 export DATABASE_URL="postgresql://user:password@localhost:5432/atfal_ghana"
 
-# 4. Push the schema to your database (creates all tables)
+# 4. Push the schema to your database (creates all tables + indexes)
 pnpm --filter @workspace/db run push
 
 # 5. Start the API server (port 3000)
-PORT=3000 pnpm --filter @workspace/api-server run dev
+PORT=3000 ALLOWED_ORIGIN=http://localhost:5000 pnpm --filter @workspace/api-server run dev
 
 # 6. In a separate terminal, start the frontend (port 5000)
 PORT=5000 BASE_PATH=/ pnpm --filter @workspace/atfal-ghana run dev
@@ -133,23 +179,20 @@ Open [http://localhost:5000](http://localhost:5000) in your browser.
 
 ## Development
 
-### Running both services together
+### Running both services
 
 ```bash
-# Starts both the API server and frontend in parallel
-pnpm run dev
+# Starts API server (3000) + frontend (5000) in parallel
+# (Configured via Replit workflows / your own process manager)
+PORT=3000 ALLOWED_ORIGIN=http://localhost:5000 pnpm --filter @workspace/api-server run dev &
+PORT=5000 BASE_PATH=/ pnpm --filter @workspace/atfal-ghana run dev
 ```
-
-> This requires a `dev` script at the root, or run each service in separate terminal tabs as shown above.
 
 ### Type checking
 
 ```bash
-# Type-check all packages
-pnpm run typecheck
-
-# Type-check only lib packages
-pnpm run typecheck:libs
+pnpm run typecheck          # all packages
+pnpm run typecheck:libs     # lib packages only
 ```
 
 ### Building for production
@@ -158,18 +201,18 @@ pnpm run typecheck:libs
 pnpm run build
 ```
 
-This runs `typecheck` first, then builds all packages that have a `build` script.
+Runs `typecheck` first, then builds all packages with a `build` script.
 
 ### Regenerating API client code
 
-The OpenAPI spec (`lib/api-spec/openapi.yaml`) is the source of truth. After editing it, regenerate the Zod schemas and React Query hooks:
+The OpenAPI spec (`lib/api-spec/openapi.yaml`) is the source of truth. After editing it:
 
 ```bash
 pnpm --filter @workspace/api-spec run codegen
 ```
 
 This updates:
-- `lib/api-zod/src/` — server-side request/response validators
+- `lib/api-zod/src/` — server-side Zod validators
 - `lib/api-client-react/src/` — frontend TanStack Query hooks
 
 ---
@@ -180,11 +223,16 @@ This updates:
 
 | Table | Description |
 |---|---|
-| `members` | Core member records (name, DOB, wing, location, guardian) |
+| `members` | Core member records (name, DOB, wing, location, guardian, photo) |
 | `member_history` | Audit log for member changes (wing transitions, edits) |
 | `graduations` | Records of wing graduations (previousWing → newWing) |
 | `circuits` | Circuit lookup table with usage counts |
 | `jamaats` | Jama'at lookup table with usage counts |
+
+### Indexes
+
+The `members` table has 10 indexes on all commonly filtered and searched columns:
+`last_name`, `first_name`, `wing`, `sector`, `region`, `zone`, `circuit`, `jamaat`, `date_of_birth`, `created_at`.
 
 ### Wing enum
 
@@ -192,17 +240,17 @@ This updates:
 CREATE TYPE wing AS ENUM ('atfal_sughir', 'atfal_kabir', 'khuddam');
 ```
 
-### Migrations
+### Migration commands
 
 ```bash
-# Push current schema to database (development — applies changes directly)
+# Apply current schema (development — direct push)
 pnpm --filter @workspace/db run push
 
-# Force push (skips confirmation prompts — use with caution)
+# Force push (skips confirmation — use with caution)
 pnpm --filter @workspace/db run push-force
 ```
 
-> For production, generate SQL migration files with `drizzle-kit generate` and apply them with `drizzle-kit migrate` instead of using `push`.
+> For production, generate SQL migrations with `drizzle-kit generate` and apply with `drizzle-kit migrate`.
 
 ---
 
@@ -210,24 +258,31 @@ pnpm --filter @workspace/db run push-force
 
 Base URL: `/api`
 
-All requests and responses use JSON. The full spec is at `lib/api-spec/openapi.yaml`.
+All endpoints accept and return JSON. Full spec: `lib/api-spec/openapi.yaml`.
 
 ### Health
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/api/healthz` | Returns server health status |
+| `GET` | `/api/healthz` | Server health check |
 
 ### Members
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/api/members` | List members (supports filters: `wing`, `sector`, `region`, `zone`, `circuit`, `jamaat`, `search`) |
+| `GET` | `/api/members` | List members (`wing`, `sector`, `region`, `zone`, `circuit`, `jamaat`, `search`, `page`, `pageSize`) |
 | `POST` | `/api/members` | Create a new member |
 | `GET` | `/api/members/:id` | Get a single member |
 | `PATCH` | `/api/members/:id` | Update a member |
 | `DELETE` | `/api/members/:id` | Delete a member |
-| `GET` | `/api/members/:id/history` | Get audit history for a member |
+| `GET` | `/api/members/:id/history` | Audit history for a member |
+
+### Uploads
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/api/upload/photo` | Upload a member photo (multipart/form-data, field: `photo`, max 5 MB) |
+| `GET` | `/api/uploads/:filename` | Serve an uploaded photo |
 
 ### Locations
 
@@ -240,14 +295,40 @@ All requests and responses use JSON. The full spec is at `lib/api-spec/openapi.y
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/api/analytics/summary` | National totals (members by wing, new this month, graduations this month) |
-| `GET` | `/api/analytics/by-sector` | Member counts broken down by sector |
+| `GET` | `/api/analytics/summary` | National totals (by wing, new this month, graduations this month) |
+| `GET` | `/api/analytics/by-sector` | Member counts by sector |
+| `GET` | `/api/analytics/by-region` | Member counts by region |
+| `GET` | `/api/analytics/birthdays` | Upcoming birthdays |
 
 ### Graduations
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/api/graduations/upcoming` | Members approaching their next wing transition |
+| `GET` | `/api/graduations/upcoming` | Members approaching wing transition |
+
+---
+
+## Security
+
+The API server implements the following security measures:
+
+| Measure | Implementation |
+|---|---|
+| Security headers | `helmet` — sets HSTS, CSP, X-Content-Type-Options, X-Frame-Options, etc. |
+| CORS | Restricted to `ALLOWED_ORIGIN` env var. Defaults to `*` in dev; must be set to your domain in production |
+| Rate limiting — general | 300 requests per 15 minutes per IP on all `/api` routes |
+| Rate limiting — writes | 60 write requests (POST/PATCH/PUT/DELETE) per 15 minutes per IP |
+| Async error handling | `express-async-errors` patches all async route handlers — no unhandled promise rejections crash the server |
+| Global error handler | Catches all errors, logs them via Pino, returns structured JSON (never leaks stack traces in production) |
+| Env validation | All required env vars validated at boot via Zod — server refuses to start with missing config |
+| Input validation | All request bodies, query strings, and path params validated via Zod (generated from OpenAPI spec) |
+| Body size limit | JSON and URL-encoded bodies capped at 2 MB |
+
+### What's NOT yet implemented (next steps for production)
+
+- **Authentication** — no login system exists. See [`supabase/docs/auth-setup.md`](./supabase/docs/auth-setup.md) to add Supabase Auth
+- **File upload storage** — photos are stored on local disk (ephemeral on most hosts). See [`supabase/docs/storage-setup.md`](./supabase/docs/storage-setup.md) to switch to Supabase Storage
+- **React error boundary** — implemented; wraps the entire app and all routes
 
 ---
 
@@ -261,17 +342,17 @@ Wing is **computed automatically** from date of birth and is never set manually:
 | 12 – 14 | `atfal_kabir` |
 | 15+ | `khuddam` |
 
-When a member's computed wing differs from the stored wing (detected on read or via a scheduled check), a graduation record is created and the member history is updated.
+When a member's computed wing differs from the stored wing, a graduation record is created and the member history is updated automatically.
 
 ---
 
 ## Deployment
 
-The project is configured for deployment on **Replit Autoscale**.
+The project is configured for **Replit Autoscale** deployment out of the box.
 
 ### Environment
 
-Set the `DATABASE_URL` secret in your deployment environment pointing to a production PostgreSQL instance (e.g. Neon, Railway, Supabase).
+Set `DATABASE_URL` and `ALLOWED_ORIGIN` (your frontend domain) as secrets in your deployment environment.
 
 ### Build
 
@@ -279,24 +360,35 @@ Set the `DATABASE_URL` secret in your deployment environment pointing to a produ
 pnpm run build
 ```
 
-The frontend builds to `artifacts/atfal-ghana/dist/public/`. The API server bundles to `artifacts/api-server/dist/index.mjs` via esbuild.
+- Frontend → `artifacts/atfal-ghana/dist/public/`
+- API server → `artifacts/api-server/dist/index.mjs` (bundled via esbuild)
 
 ### Production start
 
 ```bash
 # API server
-PORT=3000 node --enable-source-maps artifacts/api-server/dist/index.mjs
+PORT=3000 ALLOWED_ORIGIN=https://yourdomain.com node --enable-source-maps artifacts/api-server/dist/index.mjs
 
-# Frontend (serve the built static files, or use a CDN)
+# Frontend static files (serve from a CDN or use the Vite preview server)
 PORT=5000 BASE_PATH=/ pnpm --filter @workspace/atfal-ghana run serve
 ```
 
-### Post-merge / post-deploy hook
+---
 
-`scripts/post-merge.sh` runs automatically after branch merges and on deployment. It:
+## Supabase Migration
 
-1. Installs dependencies (`pnpm install --frozen-lockfile`)
-2. Pushes any schema changes (`pnpm --filter db push`)
+The `supabase/docs/` folder contains a complete guide for migrating from Replit's PostgreSQL to a full Supabase-hosted stack:
+
+| Guide | Description |
+|---|---|
+| [`supabase/docs/README.md`](./supabase/docs/README.md) | Overview and quick-start checklist |
+| [`supabase/docs/local-setup.md`](./supabase/docs/local-setup.md) | Run Supabase locally with Docker |
+| [`supabase/docs/schema-migration.md`](./supabase/docs/schema-migration.md) | Complete SQL schema + RLS policies |
+| [`supabase/docs/auth-setup.md`](./supabase/docs/auth-setup.md) | Add real authentication |
+| [`supabase/docs/storage-setup.md`](./supabase/docs/storage-setup.md) | Member photo uploads via Supabase Storage |
+| [`supabase/docs/backend-migration.md`](./supabase/docs/backend-migration.md) | Migrate Express routes to Supabase client |
+| [`supabase/docs/hosting.md`](./supabase/docs/hosting.md) | Deploy to Vercel + Railway + Supabase |
+| [`supabase/docs/environment-variables.md`](./supabase/docs/environment-variables.md) | Every env var, explained |
 
 ---
 
@@ -308,15 +400,18 @@ PORT=5000 BASE_PATH=/ pnpm --filter @workspace/atfal-ghana run serve
 | `pnpm run build` | Typecheck + build all packages |
 | `pnpm run typecheck` | Type-check all packages |
 | `pnpm --filter @workspace/db run push` | Apply schema to database |
+| `pnpm --filter @workspace/db run push-force` | Force-apply schema (no prompts) |
 | `pnpm --filter @workspace/api-server run dev` | Start API server in dev mode |
 | `pnpm --filter @workspace/atfal-ghana run dev` | Start frontend in dev mode |
-| `pnpm --filter @workspace/api-spec run codegen` | Regenerate API client + validators |
+| `pnpm --filter @workspace/api-spec run codegen` | Regenerate API client + validators from OpenAPI spec |
 
 ---
 
 ## Notes for Contributors
 
-- **`pnpm` only** — the workspace is locked to pnpm. Running `npm install` or `yarn` will fail by design (see `preinstall` in `package.json`).
-- **OpenAPI first** — all API changes should start in `lib/api-spec/openapi.yaml`, followed by running codegen. Do not hand-edit files in `lib/api-zod/src/` or `lib/api-client-react/src/`.
-- **Supply-chain safety** — `pnpm-workspace.yaml` enforces a `minimumReleaseAge` of 1440 minutes (24 hours) for all packages. Do not disable this.
-- **esbuild version is pinned** to `0.27.3` — this is intentional. Do not upgrade without verifying the override in `pnpm-workspace.yaml`.
+- **`pnpm` only** — the workspace enforces pnpm. Running `npm install` or `yarn` will fail by design.
+- **OpenAPI first** — all API changes start in `lib/api-spec/openapi.yaml`, followed by codegen. Do not hand-edit files in `lib/api-zod/src/` or `lib/api-client-react/src/`.
+- **Environment validation** — add new env vars to `artifacts/api-server/src/lib/env.ts` (`EnvSchema`) before using them. The server will fail fast if they are missing.
+- **Supply-chain safety** — `pnpm-workspace.yaml` enforces a 24-hour `minimumReleaseAge` for all packages. Do not disable this.
+- **esbuild version is pinned** to `0.27.3`. Do not upgrade without checking the override in `pnpm-workspace.yaml`.
+- **Error handling** — all async Express route handlers are wrapped by `express-async-errors`. You do not need try/catch in route handlers — thrown errors flow to the global error handler automatically.

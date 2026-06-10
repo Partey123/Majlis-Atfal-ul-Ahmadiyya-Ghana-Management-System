@@ -6,6 +6,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import NotFound from "@/pages/not-found";
 import { ThemeProvider } from "next-themes";
 import { AppProvider } from "@/context/AppContext";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 import Dashboard from "@/pages/Dashboard";
 import MemberList from "@/pages/members/MemberList";
@@ -43,18 +44,22 @@ function Router() {
 
 function App() {
   return (
-    <ThemeProvider defaultTheme="light" attribute="class">
-      <QueryClientProvider client={queryClient}>
-        <AppProvider>
-          <TooltipProvider>
-            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-              <Router />
-            </WouterRouter>
-            <Toaster richColors position="top-right" />
-          </TooltipProvider>
-        </AppProvider>
-      </QueryClientProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider defaultTheme="light" attribute="class">
+        <QueryClientProvider client={queryClient}>
+          <AppProvider>
+            <TooltipProvider>
+              <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                <ErrorBoundary>
+                  <Router />
+                </ErrorBoundary>
+              </WouterRouter>
+              <Toaster richColors position="top-right" />
+            </TooltipProvider>
+          </AppProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 
