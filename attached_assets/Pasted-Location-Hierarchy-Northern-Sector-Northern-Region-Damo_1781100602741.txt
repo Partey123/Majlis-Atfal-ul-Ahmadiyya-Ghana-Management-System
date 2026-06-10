@@ -1,0 +1,179 @@
+Location Hierarchy
+
+Northern Sector
+
+Northern Region
+
+Damongo
+
+Tamale
+
+Yendi
+
+Upper East Region
+
+Bolga
+
+Nalerigu
+
+Walewale
+
+Upper West Region
+
+Goripie
+
+Gurungu/Kalba
+
+Hamile
+
+Tumu
+
+Wa East
+
+Wa West
+
+Middle Sector
+
+Ashanti Region
+
+Amansie
+
+Denkyira
+
+Kumasi North
+
+Kumasi South
+
+Obuasi
+
+Oforikrom
+
+Sefwi
+
+Sekyere East
+
+Sekyere West
+
+Brong Ahafo Region
+
+Sunyani
+
+Techiman
+
+Eastern Region
+
+Akim Oda
+
+Koforidua
+
+Nkawkaw
+
+Southern Sector
+
+Greater Accra Region
+
+Accra
+
+Kasoa
+
+Tema
+
+Central East Region
+
+Agona Zone
+
+Assikuma Bedum
+
+Essiam Zone
+
+Gomoa East
+
+Gomoa West
+
+Central West Region
+
+Abura
+
+Assin
+
+Cape Coast
+
+Ekumfi
+
+Mankessim
+
+Saltpond
+
+Twifo
+
+Volta Region
+
+Volta
+
+Western Region
+
+Sekondi
+
+Takoradi
+
+Tarkwa
+
+Cascading Selection Logic
+
+Sector
+→ Region
+→ Zone
+→ Circuit
+→ Jama'at
+
+Example:
+
+Northern Sector
+→ Northern Region
+→ Tamale
+→ [User types or selects Circuit]
+→ [User types or selects Jama'at]
+
+Example:
+
+Middle Sector
+→ Ashanti Region
+→ Kumasi South
+→ [User types or selects Circuit]
+→ [User types or selects Jama'at]
+
+Example:
+
+Southern Sector
+→ Greater Accra Region
+→ Tema
+→ [User types or selects Circuit]
+→ [User types or selects Jama'at]
+
+Circuit and Jama'at are not predefined dropdowns.
+
+They are searchable autocomplete fields that:
+
+Suggest previously saved values.
+
+Allow creation of new values when no match exists.
+
+Automatically save newly created values for future use.
+
+Become available to all users with the appropriate permissions.
+
+
+remove the position from the database 
+add this migration to the supabase migration folder
+
+aslo configure theme toggle
+a navbar thast not scrollable
+it must have theme toggle and avatar that dropsdown when clicked to settings profile and logout
+
+also remove the biryhday analytics and statcard from the dashboard all upcoming bithdays must be removed
+the wording should be date of birth instead of birthday
+the export must be exactly like this and import too 
+configure input and preview 
+
+design member cards such that the card feels like ecommerce app a beautiful card with the details on it 
+also at the member detail page there must not be any overflow or breakage for mobile mode fix it or redesign scuh all the components are mobile optimized

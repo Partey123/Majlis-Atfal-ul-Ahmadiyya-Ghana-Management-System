@@ -16,7 +16,6 @@ export const membersTable = pgTable("members", {
   zone: text("zone").notNull(),
   circuit: text("circuit").notNull(),
   jamaat: text("jamaat").notNull(),
-  position: text("position"),
   photoUrl: text("photo_url"),
   guardianName: text("guardian_name"),
   guardianType: text("guardian_type"),

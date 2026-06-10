@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { useLocationCascade } from "@/hooks/useLocationCascade";
+import { SECTORS, getRegions, getZones } from "@/data/locationData";
 import { useListCircuits, useListJamaats } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,51 +9,71 @@ import { Input } from "@/components/ui/input";
 import { Search, ChevronRight, MapPin } from "lucide-react";
 import { useDebounce } from "@/hooks/useDebounce";
 import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 export default function Locations() {
-  const {
-    sector, setSector,
-    region, setRegion,
-    zone, setZone,
-    sectors, regions, zones
-  } = useLocationCascade();
+  const [sector, setSector] = useState("");
+  const [region, setRegion] = useState("");
+  const [zone, setZone] = useState("");
+
+  const regions = sector ? getRegions(sector) : [];
+  const zones = sector && region ? getZones(sector, region) : [];
 
   const [circuitSearch, setCircuitSearch] = useState("");
   const debouncedCircuitSearch = useDebounce(circuitSearch, 300);
-  const { data: circuits } = useListCircuits({ q: debouncedCircuitSearch }, { query: { enabled: true } as any });
+  const { data: circuits } = useListCircuits(
+    { q: debouncedCircuitSearch },
+    { query: { enabled: true } as any }
+  );
 
   const [jamaatSearch, setJamaatSearch] = useState("");
   const debouncedJamaatSearch = useDebounce(jamaatSearch, 300);
-  const { data: jamaats } = useListJamaats({ q: debouncedJamaatSearch }, { query: { enabled: true } as any });
+  const { data: jamaats } = useListJamaats(
+    { q: debouncedJamaatSearch },
+    { query: { enabled: true } as any }
+  );
+
+  const handleSectorClick = (s: string) => {
+    setSector(s);
+    setRegion("");
+    setZone("");
+  };
+
+  const handleRegionClick = (r: string) => {
+    setRegion(r);
+    setZone("");
+  };
 
   return (
     <div className="space-y-8 pb-10">
-      <PageHeader 
-        title="Location Hierarchy" 
-        subtitle="Browse and manage the organizational structure"
+      <PageHeader
+        title="Location Hierarchy"
+        subtitle="Browse the organisational structure — Sector → Region → Zone → Circuit → Jama'at"
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[400px]">
+      {/* Cascading column browser */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4" style={{ minHeight: 360 }}>
+
         {/* Sectors */}
-        <Card className="flex flex-col h-full overflow-hidden">
-          <CardHeader className="py-3 px-4 bg-muted/30 border-b">
+        <Card className="flex flex-col overflow-hidden">
+          <CardHeader className="py-3 px-4 bg-muted/30 border-b shrink-0">
             <CardTitle className="text-sm font-medium">Sectors</CardTitle>
           </CardHeader>
           <ScrollArea className="flex-1">
             <div className="p-2 space-y-1">
-              {sectors.map(s => (
+              {SECTORS.map(s => (
                 <button
-                  key={s.id}
-                  onClick={() => setSector(s.name)}
-                  className={`w-full flex items-center justify-between p-2 rounded-md text-sm transition-colors ${sector === s.name ? 'bg-primary text-primary-foreground font-medium' : 'hover:bg-muted'}`}
+                  key={s}
+                  onClick={() => handleSectorClick(s)}
+                  className={cn(
+                    "w-full flex items-center justify-between p-2.5 rounded-md text-sm transition-colors",
+                    sector === s
+                      ? "bg-primary text-primary-foreground font-semibold"
+                      : "hover:bg-muted text-foreground"
+                  )}
                 >
-                  <span>{s.name}</span>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={sector === s.name ? "secondary" : "outline"} className="text-[10px] px-1.5 py-0">
-                      {s.memberCount}
-                    </Badge>
-                    <ChevronRight className={`h-4 w-4 ${sector === s.name ? 'opacity-100' : 'opacity-30'}`} />
-                  </div>
+                  <span>{s}</span>
+                  <ChevronRight className={cn("h-4 w-4 shrink-0", sector === s ? "opacity-80" : "opacity-30")} />
                 </button>
               ))}
             </div>
@@ -61,11 +81,11 @@ export default function Locations() {
         </Card>
 
         {/* Regions */}
-        <Card className="flex flex-col h-full overflow-hidden relative">
-          <CardHeader className="py-3 px-4 bg-muted/30 border-b">
+        <Card className="flex flex-col overflow-hidden">
+          <CardHeader className="py-3 px-4 bg-muted/30 border-b shrink-0">
             <CardTitle className="text-sm font-medium">Regions</CardTitle>
           </CardHeader>
-          <div className="flex-1 overflow-hidden relative">
+          <div className="flex-1 relative">
             <AnimatePresence mode="wait">
               {sector ? (
                 <motion.div
@@ -79,17 +99,17 @@ export default function Locations() {
                     <div className="p-2 space-y-1">
                       {regions.map(r => (
                         <button
-                          key={r.id}
-                          onClick={() => setRegion(r.name)}
-                          className={`w-full flex items-center justify-between p-2 rounded-md text-sm transition-colors ${region === r.name ? 'bg-primary text-primary-foreground font-medium' : 'hover:bg-muted'}`}
+                          key={r}
+                          onClick={() => handleRegionClick(r)}
+                          className={cn(
+                            "w-full flex items-center justify-between p-2.5 rounded-md text-sm transition-colors",
+                            region === r
+                              ? "bg-primary text-primary-foreground font-semibold"
+                              : "hover:bg-muted text-foreground"
+                          )}
                         >
-                          <span>{r.name}</span>
-                          <div className="flex items-center gap-2">
-                            <Badge variant={region === r.name ? "secondary" : "outline"} className="text-[10px] px-1.5 py-0">
-                              {r.memberCount}
-                            </Badge>
-                            <ChevronRight className={`h-4 w-4 ${region === r.name ? 'opacity-100' : 'opacity-30'}`} />
-                          </div>
+                          <span>{r}</span>
+                          <ChevronRight className={cn("h-4 w-4 shrink-0", region === r ? "opacity-80" : "opacity-30")} />
                         </button>
                       ))}
                     </div>
@@ -105,11 +125,11 @@ export default function Locations() {
         </Card>
 
         {/* Zones */}
-        <Card className="flex flex-col h-full overflow-hidden relative">
-          <CardHeader className="py-3 px-4 bg-muted/30 border-b">
+        <Card className="flex flex-col overflow-hidden">
+          <CardHeader className="py-3 px-4 bg-muted/30 border-b shrink-0">
             <CardTitle className="text-sm font-medium">Zones</CardTitle>
           </CardHeader>
-          <div className="flex-1 overflow-hidden relative">
+          <div className="flex-1 relative">
             <AnimatePresence mode="wait">
               {region ? (
                 <motion.div
@@ -123,14 +143,17 @@ export default function Locations() {
                     <div className="p-2 space-y-1">
                       {zones.map(z => (
                         <button
-                          key={z.id}
-                          onClick={() => setZone(z.name)}
-                          className={`w-full flex items-center justify-between p-2 rounded-md text-sm transition-colors ${zone === z.name ? 'bg-primary text-primary-foreground font-medium' : 'hover:bg-muted'}`}
+                          key={z}
+                          onClick={() => setZone(z)}
+                          className={cn(
+                            "w-full flex items-center justify-between p-2.5 rounded-md text-sm transition-colors",
+                            zone === z
+                              ? "bg-primary text-primary-foreground font-semibold"
+                              : "hover:bg-muted text-foreground"
+                          )}
                         >
-                          <span>{z.name}</span>
-                          <Badge variant={zone === z.name ? "secondary" : "outline"} className="text-[10px] px-1.5 py-0">
-                            {z.memberCount}
-                          </Badge>
+                          <span>{z}</span>
+                          {zone === z && <Badge variant="secondary" className="text-[10px] px-1.5">Selected</Badge>}
                         </button>
                       ))}
                     </div>
@@ -146,11 +169,11 @@ export default function Locations() {
         </Card>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 mt-8">
-        {/* Circuits Search */}
+      {/* Circuits & Jama'ats directory */}
+      <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Circuits Directory</CardTitle>
+            <CardTitle className="text-base">Circuits Directory</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="relative">
@@ -166,12 +189,15 @@ export default function Locations() {
               {circuits && circuits.length > 0 ? (
                 <div className="space-y-1">
                   {circuits.map(c => (
-                    <div key={c.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-md hover:bg-muted/50 border border-transparent hover:border-border text-sm gap-2">
-                      <div className="font-medium text-foreground">{c.name}</div>
-                      <div className="flex items-center gap-3 text-muted-foreground">
-                        <div className="flex items-center gap-1 text-xs">
+                    <div
+                      key={c.id}
+                      className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-md hover:bg-muted/50 border border-transparent hover:border-border text-sm gap-1"
+                    >
+                      <span className="font-medium text-foreground">{c.name}</span>
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <span className="flex items-center gap-1 text-xs">
                           <MapPin className="h-3 w-3" /> {c.zone}
-                        </div>
+                        </span>
                         <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                           {c.usageCount} members
                         </Badge>
@@ -180,18 +206,17 @@ export default function Locations() {
                   ))}
                 </div>
               ) : (
-                <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
-                  {debouncedCircuitSearch ? "No circuits found matching search" : "Type to search circuits"}
+                <div className="h-[200px] flex items-center justify-center text-sm text-muted-foreground">
+                  {debouncedCircuitSearch ? "No circuits found" : "Type to search circuits"}
                 </div>
               )}
             </ScrollArea>
           </CardContent>
         </Card>
 
-        {/* Jama'ats Search */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Jama'ats Directory</CardTitle>
+            <CardTitle className="text-base">Jama'ats Directory</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="relative">
@@ -207,12 +232,15 @@ export default function Locations() {
               {jamaats && jamaats.length > 0 ? (
                 <div className="space-y-1">
                   {jamaats.map(j => (
-                    <div key={j.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-md hover:bg-muted/50 border border-transparent hover:border-border text-sm gap-2">
-                      <div className="font-medium text-foreground">{j.name}</div>
-                      <div className="flex items-center gap-3 text-muted-foreground">
-                        <div className="flex items-center gap-1 text-xs">
+                    <div
+                      key={j.id}
+                      className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-md hover:bg-muted/50 border border-transparent hover:border-border text-sm gap-1"
+                    >
+                      <span className="font-medium text-foreground">{j.name}</span>
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <span className="flex items-center gap-1 text-xs">
                           <MapPin className="h-3 w-3" /> {j.circuit}
-                        </div>
+                        </span>
                         <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                           {j.usageCount} members
                         </Badge>
@@ -221,8 +249,8 @@ export default function Locations() {
                   ))}
                 </div>
               ) : (
-                <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
-                  {debouncedJamaatSearch ? "No jama'ats found matching search" : "Type to search jama'ats"}
+                <div className="h-[200px] flex items-center justify-center text-sm text-muted-foreground">
+                  {debouncedJamaatSearch ? "No jama'ats found" : "Type to search jama'ats"}
                 </div>
               )}
             </ScrollArea>

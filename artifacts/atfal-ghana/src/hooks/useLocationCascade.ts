@@ -1,29 +1,29 @@
-import { useState, useEffect } from "react";
-import { useListSectors, useListRegions, useListZones } from "@workspace/api-client-react";
+import { useState } from "react";
+import { SECTORS, getRegions, getZones } from "@/data/locationData";
 
-export function useLocationCascade() {
-  const [sector, setSector] = useState<string | undefined>();
-  const [region, setRegion] = useState<string | undefined>();
-  const [zone, setZone] = useState<string | undefined>();
+export function useLocationCascade(initial?: { sector?: string; region?: string; zone?: string }) {
+  const [sector, setSectorState] = useState<string>(initial?.sector ?? "");
+  const [region, setRegionState] = useState<string>(initial?.region ?? "");
+  const [zone, setZoneState] = useState<string>(initial?.zone ?? "");
 
-  const { data: sectorsData, isLoading: isLoadingSectors } = useListSectors();
-  const { data: regionsData, isLoading: isLoadingRegions } = useListRegions(
-    { sector },
-    { query: { enabled: !!sector } as any }
-  );
-  const { data: zonesData, isLoading: isLoadingZones } = useListZones(
-    { region },
-    { query: { enabled: !!region } as any }
-  );
+  const setSector = (val: string) => {
+    setSectorState(val);
+    setRegionState("");
+    setZoneState("");
+  };
 
-  useEffect(() => {
-    setRegion(undefined);
-    setZone(undefined);
-  }, [sector]);
+  const setRegion = (val: string) => {
+    setRegionState(val);
+    setZoneState("");
+  };
 
-  useEffect(() => {
-    setZone(undefined);
-  }, [region]);
+  const setZone = (val: string) => {
+    setZoneState(val);
+  };
+
+  const sectors = SECTORS;
+  const regions = sector ? getRegions(sector) : [];
+  const zones = sector && region ? getZones(sector, region) : [];
 
   return {
     sector,
@@ -32,9 +32,9 @@ export function useLocationCascade() {
     setRegion,
     zone,
     setZone,
-    sectors: sectorsData || [],
-    regions: regionsData || [],
-    zones: zonesData || [],
-    isLoading: isLoadingSectors || isLoadingRegions || isLoadingZones
+    sectors,
+    regions,
+    zones,
+    isLoading: false,
   };
 }
