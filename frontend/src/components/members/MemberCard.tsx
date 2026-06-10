@@ -2,23 +2,29 @@ import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { WingBadge } from "./WingBadge";
 import type { Member } from "@workspace/api-client-react";
-import { MapPin, Calendar, User } from "lucide-react";
+import { MapPin, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface MemberCardProps {
   member: Member;
 }
 
-const WING_GRADIENT: Record<string, string> = {
-  atfal_sughir: "from-sky-500 to-sky-600",
-  atfal_kabir: "from-emerald-500 to-emerald-600",
-  khuddam: "from-amber-500 to-amber-600",
-};
-
-const WING_BG: Record<string, string> = {
-  atfal_sughir: "bg-sky-50 dark:bg-sky-950/30",
-  atfal_kabir: "bg-emerald-50 dark:bg-emerald-950/30",
-  khuddam: "bg-amber-50 dark:bg-amber-950/30",
+const WING_ACCENT: Record<string, { gradient: string; glow: string; ring: string }> = {
+  atfal_sughir: {
+    gradient: "from-sky-500 via-sky-400 to-cyan-400",
+    glow: "shadow-sky-200/50 dark:shadow-sky-900/40",
+    ring: "ring-sky-200 dark:ring-sky-800",
+  },
+  atfal_kabir: {
+    gradient: "from-emerald-500 via-emerald-400 to-teal-400",
+    glow: "shadow-emerald-200/50 dark:shadow-emerald-900/40",
+    ring: "ring-emerald-200 dark:ring-emerald-800",
+  },
+  khuddam: {
+    gradient: "from-amber-500 via-amber-400 to-yellow-400",
+    glow: "shadow-amber-200/50 dark:shadow-amber-900/40",
+    ring: "ring-amber-200 dark:ring-amber-800",
+  },
 };
 
 function getInitials(firstName: string, lastName: string) {
@@ -26,80 +32,118 @@ function getInitials(firstName: string, lastName: string) {
 }
 
 export function MemberCard({ member }: MemberCardProps) {
-  const gradient = WING_GRADIENT[member.wing] ?? "from-slate-500 to-slate-600";
-  const bg = WING_BG[member.wing] ?? "";
+  const accent = WING_ACCENT[member.wing] ?? WING_ACCENT.atfal_sughir;
   const initials = getInitials(member.firstName, member.lastName);
   const dob = member.dateOfBirth
-    ? new Date(member.dateOfBirth).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+    ? new Date(member.dateOfBirth).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
     : null;
 
   return (
     <Link href={`/members/${member.id}`}>
       <motion.div
-        initial={{ opacity: 0, y: 12 }}
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        whileHover={{ y: -2 }}
-        transition={{ type: "spring", stiffness: 300, damping: 24 }}
-        className="block group cursor-pointer h-full"
+        whileHover={{ y: -3, scale: 1.01 }}
+        transition={{ type: "spring", stiffness: 320, damping: 26 }}
+        className="group cursor-pointer h-full"
       >
-        <div className="relative rounded-2xl border bg-card shadow-sm hover:shadow-lg transition-shadow duration-200 overflow-hidden h-full flex flex-col">
+        <div className={cn(
+          "relative rounded-2xl bg-card border overflow-hidden h-full flex flex-col",
+          "shadow-sm hover:shadow-xl transition-all duration-300",
+          `hover:${accent.glow}`,
+        )}>
 
-          {/* ── Banner / Avatar area ── */}
-          <div className={cn("relative h-24 bg-gradient-to-br", gradient, "flex items-end justify-center pb-0")}>
-            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_70%_30%,white,transparent)]" />
-            <div className={cn(
-              "w-16 h-16 rounded-full border-4 border-card flex items-center justify-center font-bold text-xl text-white shadow-md absolute -bottom-8 left-5",
-              `bg-gradient-to-br ${gradient}`
-            )}>
-              {member.photoUrl ? (
-                <img src={member.photoUrl} alt={member.firstName} className="w-full h-full rounded-full object-cover" />
-              ) : (
-                initials
-              )}
-            </div>
-            <div className="absolute top-3 right-3">
+          {/* ── Gradient banner ── */}
+          <div className={cn("relative h-28 bg-gradient-to-br flex-shrink-0", accent.gradient)}>
+            {/* Subtle texture overlay */}
+            <div className="absolute inset-0 opacity-[0.15]"
+              style={{ backgroundImage: "radial-gradient(circle at 80% 20%, white 0%, transparent 60%), radial-gradient(circle at 20% 80%, white 0%, transparent 50%)" }} />
+
+            {/* Wing badge top-right */}
+            <div className="absolute top-3 right-3 z-10">
               <WingBadge wing={member.wing} />
             </div>
+
+            {/* Member ID — top-left */}
+            <div className="absolute top-3 left-3 z-10">
+              <span className="text-[10px] font-mono font-semibold text-white/60 bg-black/20 backdrop-blur-sm px-1.5 py-0.5 rounded-md">
+                #{member.id}
+              </span>
+            </div>
           </div>
 
-          {/* ── Content ── */}
-          <div className="pt-10 px-5 pb-5 flex flex-col flex-1">
-            <div className="mb-3">
-              <h3 className="font-bold text-base text-foreground group-hover:text-primary transition-colors leading-tight line-clamp-1">
-                {member.firstName} {member.lastName}
+          {/* ── Avatar — bridging banner and body ── */}
+          <div className="px-5 -mt-9 z-10 relative">
+            <div className={cn(
+              "h-16 w-16 rounded-2xl border-[3px] border-card shadow-lg flex items-center justify-center font-bold text-lg text-white overflow-hidden",
+              `bg-gradient-to-br ${accent.gradient}`,
+              `ring-2 ${accent.ring}`,
+            )}>
+              {member.photoUrl ? (
+                <img
+                  src={member.photoUrl}
+                  alt={member.firstName}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="drop-shadow-sm">{initials}</span>
+              )}
+            </div>
+          </div>
+
+          {/* ── Content body ── */}
+          <div className="px-5 pb-5 pt-2 flex flex-col flex-1">
+            {/* Name */}
+            <div className="mb-4">
+              <h3 className="font-bold text-base leading-snug text-foreground group-hover:text-primary transition-colors line-clamp-1">
+                {member.firstName}{member.middleName ? ` ${member.middleName}` : ""} {member.lastName}
               </h3>
-              {member.middleName && (
-                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{member.middleName}</p>
-              )}
+              <p className="text-xs text-muted-foreground mt-0.5 font-medium">
+                {member.age} years old
+              </p>
             </div>
 
-            <div className="space-y-2 text-xs text-muted-foreground mt-auto">
+            {/* Detail rows */}
+            <div className="space-y-2 mt-auto">
               {dob && (
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-3.5 w-3.5 shrink-0" />
-                  <span>{dob} &middot; {member.age} yrs</span>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center shrink-0">
+                    <Calendar className="h-3.5 w-3.5" />
+                  </div>
+                  <span>DOB: {dob}</span>
                 </div>
               )}
-              <div className="flex items-center gap-2">
-                <MapPin className="h-3.5 w-3.5 shrink-0" />
-                <span className="line-clamp-1">{member.zone} · {member.jamaat}</span>
+
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center shrink-0">
+                  <MapPin className="h-3.5 w-3.5" />
+                </div>
+                <span className="line-clamp-1 min-w-0">{member.zone} &middot; {member.jamaat}</span>
               </div>
-              {member.guardianName && (
-                <div className="flex items-center gap-2">
-                  <User className="h-3.5 w-3.5 shrink-0" />
-                  <span className="line-clamp-1">{member.guardianName}</span>
-                </div>
-              )}
             </div>
 
-            {/* Footer chip */}
-            <div className={cn("mt-4 pt-3 border-t border-border/50 flex items-center justify-between")}>
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+            {/* Footer */}
+            <div className="mt-4 pt-3 border-t border-border/60 flex items-center justify-between gap-2">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 truncate">
                 {member.sector}
               </span>
-              <span className="text-[10px] font-mono text-muted-foreground/40">#{member.id}</span>
+              {member.guardianName && (
+                <span className="text-[10px] text-muted-foreground/50 truncate text-right max-w-[45%]">
+                  {member.guardianName}
+                </span>
+              )}
             </div>
           </div>
+
+          {/* Hover accent line at bottom */}
+          <div className={cn(
+            "absolute bottom-0 inset-x-0 h-0.5 bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity duration-300",
+            accent.gradient,
+          )} />
         </div>
       </motion.div>
     </Link>

@@ -154,7 +154,7 @@ export default function Dashboard() {
       <Card>
         <CardHeader className="flex flex-row items-center gap-2">
           <Clock className="h-5 w-5 text-amber-500" />
-          <CardTitle>Upcoming Graduations</CardTitle>
+          <CardTitle>Upcoming Graduations to Khuddam</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoadingGrads ? (

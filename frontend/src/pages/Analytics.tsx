@@ -2,22 +2,18 @@ import {
   useGetAnalyticsSummary,
   useGetAnalyticsBySector,
   useGetAnalyticsByRegion,
-  useGetBirthdayAnalytics,
 } from "@workspace/api-client-react";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
-import { MemberAvatar } from "@/components/members/MemberAvatar";
-import { WingBadge } from "@/components/members/WingBadge";
-import { Link } from "wouter";
 import { motion } from "framer-motion";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, PieChart, Pie, Cell,
 } from "recharts";
-import { Users, UserPlus, GraduationCap, Cake } from "lucide-react";
+import { Users, UserPlus, GraduationCap } from "lucide-react";
 
 const WING_COLORS = {
   atfalSughir: "#0ea5e9",
@@ -50,7 +46,6 @@ export default function Analytics() {
   const { data: regionData, isLoading: loadingRegion } = useGetAnalyticsByRegion(
     sectorFilter !== "all" ? { sector: sectorFilter } : {}
   );
-  const { data: bdayData, isLoading: loadingBdays } = useGetBirthdayAnalytics();
 
   const pieData = summary
     ? [
@@ -307,64 +302,6 @@ export default function Analytics() {
             </table>
           </div>
         </Card>
-      </section>
-
-      {/* ── Section 4: Birthday Analytics ── */}
-      <section className="space-y-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Birthday Analytics
-        </h2>
-
-        <div className="grid gap-4 md:grid-cols-3">
-          {[
-            { key: "today", label: "Today", members: bdayData?.today ?? [] },
-            { key: "thisWeek", label: "This Week", members: bdayData?.thisWeek ?? [] },
-            { key: "thisMonth", label: "This Month", members: bdayData?.thisMonth ?? [] },
-          ].map(({ key, label, members }) => (
-            <Card key={key}>
-              <CardHeader className="pb-3 border-b bg-muted/20">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                    <Cake className="h-4 w-4 text-primary" /> {label}
-                  </CardTitle>
-                  <span className={`text-2xl font-bold tabular-nums ${members.length > 0 ? "text-primary" : "text-muted-foreground"}`}>
-                    {loadingBdays ? <Skeleton className="h-7 w-6" /> : members.length}
-                  </span>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                {loadingBdays ? (
-                  <div className="p-4 space-y-3">
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                  </div>
-                ) : members.length === 0 ? (
-                  <div className="py-8 text-center text-xs text-muted-foreground">
-                    No birthdays {label.toLowerCase()}
-                  </div>
-                ) : (
-                  <div className="divide-y max-h-56 overflow-y-auto">
-                    {members.map((m) => (
-                      <Link key={m.id} href={`/members/${m.id}`}>
-                        <div className="flex items-center gap-3 p-3 hover:bg-muted/30 transition-colors cursor-pointer">
-                          <MemberAvatar member={m} size="sm" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{m.firstName} {m.lastName}</p>
-                            <p className="text-xs text-muted-foreground truncate">{m.zone} · {m.jamaat}</p>
-                          </div>
-                          <div className="text-right shrink-0">
-                            <WingBadge wing={m.wing} size="sm" />
-                            <p className="text-xs text-muted-foreground mt-1">{m.age} yrs</p>
-                          </div>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
       </section>
     </div>
   );
