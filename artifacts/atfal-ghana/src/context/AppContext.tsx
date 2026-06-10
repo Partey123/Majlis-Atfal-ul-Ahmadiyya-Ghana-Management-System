@@ -1,12 +1,12 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useState, ReactNode } from "react";
+import { useTheme } from "next-themes";
 
 type ViewMode = "card" | "list";
-type Theme = "light" | "dark";
 
 interface AppContextType {
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
-  theme: Theme;
+  theme: string;
   toggleTheme: () => void;
 }
 
@@ -14,23 +14,26 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [viewMode, setViewModeState] = useState<ViewMode>(() => {
-    const saved = localStorage.getItem("viewMode");
-    return (saved as ViewMode) || "card";
+    try {
+      return (localStorage.getItem("viewMode") as ViewMode) || "card";
+    } catch {
+      return "card";
+    }
   });
 
-  const [theme, setThemeState] = useState<Theme>("light");
+  const { theme, setTheme, resolvedTheme } = useTheme();
 
   const setViewMode = (mode: ViewMode) => {
     setViewModeState(mode);
-    localStorage.setItem("viewMode", mode);
+    try { localStorage.setItem("viewMode", mode); } catch {}
   };
 
   const toggleTheme = () => {
-    setThemeState((prev) => (prev === "light" ? "dark" : "light"));
+    setTheme(resolvedTheme === "dark" ? "light" : "dark");
   };
 
   return (
-    <AppContext.Provider value={{ viewMode, setViewMode, theme, toggleTheme }}>
+    <AppContext.Provider value={{ viewMode, setViewMode, theme: resolvedTheme ?? theme ?? "light", toggleTheme }}>
       {children}
     </AppContext.Provider>
   );
