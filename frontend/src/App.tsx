@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
@@ -11,6 +11,7 @@ import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Skeleton } from "@/components/ui/skeleton";
 import Login from "@/pages/Login";
+import { setAuthTokenGetter } from "@workspace/api-client-react";
 
 const Dashboard     = lazy(() => import("@/pages/Dashboard"));
 const MemberList    = lazy(() => import("@/pages/members/MemberList"));
@@ -59,7 +60,12 @@ function Router() {
 }
 
 function AppContent() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, accessToken } = useAuth();
+
+  // Update API client with access token
+  useEffect(() => {
+    setAuthTokenGetter(() => accessToken);
+  }, [accessToken]);
 
   if (isLoading) {
     return (

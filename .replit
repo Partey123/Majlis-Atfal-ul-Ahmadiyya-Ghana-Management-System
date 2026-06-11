@@ -53,10 +53,6 @@ stack = "BEST_EFFORT_FALLBACK"
 expertMode = true
 integrations = ["javascript_database:1.0.0"]
 
-[postMerge]
-path = "scripts/post-merge.sh"
-timeoutMs = 20000
-
 [[ports]]
 localPort = 3000
 externalPort = 3001

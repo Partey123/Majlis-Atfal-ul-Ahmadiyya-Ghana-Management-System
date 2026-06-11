@@ -1,54 +1,116 @@
 import { Router } from "express";
-import jwt from "jsonwebtoken";
+import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "../lib/supabase";
 import { env } from "../lib/env";
+import { logger } from "../lib/logger";
 
 const router = Router();
-const COOKIE_NAME = "atfal_session";
 
-function cookieOptions() {
-  return {
-    httpOnly: true,
-    secure: env.NODE_ENV === "production",
-    sameSite: "lax" as const,
-    maxAge: 24 * 60 * 60 * 1000,
-  };
-}
+// Regular client for sign-in (uses anon key)
+const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
 
-router.post("/auth/login", (req, res) => {
-  const { username, password } = (req.body ?? {}) as { username?: string; password?: string };
+/**
+ * POST /api/auth/signup
+ * Creates a new user account in Supabase Auth
+ */
+router.post("/auth/signup", async (req, res) => {
+  try {
+    const { email, password } = (req.body ?? {}) as {
+      email?: string;
+      password?: string;
+    };
 
-  if (!username || !password) {
-    res.status(400).json({ error: "Username and password are required" });
-    return;
+    if (!email || !password) {
+      res.status(400).json({ error: "Email and password are required" });
+      return;
+    }
+
+    const { data, error } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true, // Auto-confirm for local development
+    });
+
+    if (error) {
+      logger.error({ error }, "Signup failed");
+      res.status(400).json({ error: error.message });
+      return;
+    }
+
+    res.status(201).json({
+      id: data.user.id,
+      email: data.user.email,
+    });
+  } catch (err) {
+    logger.error({ err }, "Signup error");
+    res.status(500).json({ error: "Internal server error" });
   }
-
-  if (username !== env.ADMIN_USERNAME || password !== env.ADMIN_PASSWORD) {
-    res.status(401).json({ error: "Invalid credentials" });
-    return;
-  }
-
-  const token = jwt.sign({ username, role: "admin" }, env.JWT_SECRET, { expiresIn: "24h" });
-  res.cookie(COOKIE_NAME, token, cookieOptions());
-  res.json({ username, role: "admin" });
 });
 
+/**
+ * POST /api/auth/signin
+ * Signs in a user and returns session tokens
+ */
+router.post("/auth/signin", async (req, res) => {
+  try {
+    const { email, password } = (req.body ?? {}) as {
+      email?: string;
+      password?: string;
+    };
+
+    if (!email || !password) {
+      res.status(400).json({ error: "Email and password are required" });
+      return;
+    }
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      logger.error({ error }, "Signin failed");
+      res.status(401).json({ error: error.message });
+      return;
+    }
+
+    res.json({
+      accessToken: data.session.access_token,
+      refreshToken: data.session.refresh_token,
+      user: {
+        id: data.user.id,
+        email: data.user.email,
+      },
+    });
+  } catch (err) {
+    logger.error({ err }, "Signin error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * POST /api/auth/logout
+ * Invalidates the session (handled on client)
+ */
 router.post("/auth/logout", (_req, res) => {
-  res.clearCookie(COOKIE_NAME);
   res.json({ ok: true });
 });
 
-router.get("/auth/me", (req, res) => {
-  const token = req.cookies?.[COOKIE_NAME];
-  if (!token) {
-    res.status(401).json({ error: "Not authenticated" });
-    return;
-  }
+/**
+ * GET /api/auth/me
+ * Returns current user from JWT token
+ */
+router.get("/auth/me", async (req, res) => {
   try {
-    const user = jwt.verify(token, env.JWT_SECRET) as { username: string; role: string };
-    res.json({ username: user.username, role: user.role });
-  } catch {
-    res.clearCookie(COOKIE_NAME);
-    res.status(401).json({ error: "Invalid or expired session" });
+    const user = (req as any).user;
+    if (!user) {
+      res.status(401).json({ error: "Not authenticated" });
+      return;
+    }
+    res.json(user);
+  } catch (err) {
+    logger.error({ err }, "Auth me error");
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 

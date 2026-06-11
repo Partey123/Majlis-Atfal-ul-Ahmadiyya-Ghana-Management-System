@@ -5,11 +5,14 @@ const EnvSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   PORT: z.string().min(1, "PORT is required"),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
-  ALLOWED_ORIGIN: z.string().default("*"),
+  ALLOWED_ORIGIN: z.string().default("http://localhost:5000"),
   LOG_LEVEL: z.enum(["trace", "debug", "info", "warn", "error", "fatal"]).default("info"),
-  JWT_SECRET: z.string().default("dev-only-secret-change-for-production"),
-  ADMIN_USERNAME: z.string().default("admin"),
-  ADMIN_PASSWORD: z.string().default("admin123"),
+  
+  // Supabase Auth & Database (required)
+  SUPABASE_URL: z.string().min(1, "SUPABASE_URL is required for auth"),
+  SUPABASE_ANON_KEY: z.string().min(1, "SUPABASE_ANON_KEY is required"),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, "SUPABASE_SERVICE_ROLE_KEY is required"),
+  STORAGE_BUCKET: z.string().default("member-photos"),
 });
 
 function validateEnv() {
@@ -21,13 +24,6 @@ function validateEnv() {
       .join("\n");
     logger.error(`\nMissing or invalid environment variables:\n${issues}\n`);
     process.exit(1);
-  }
-
-  if (
-    result.data.JWT_SECRET === "dev-only-secret-change-for-production" &&
-    result.data.NODE_ENV === "production"
-  ) {
-    logger.warn("JWT_SECRET is using the default insecure value in production. Set a strong secret.");
   }
 
   return result.data;

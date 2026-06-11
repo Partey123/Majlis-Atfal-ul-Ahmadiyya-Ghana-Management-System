@@ -1,12 +1,14 @@
 # Supabase Storage — Member Photo Uploads
 
-The current app stores photo uploads on the local filesystem at `artifacts/api-server/uploads/`. This is ephemeral on most hosting platforms. Supabase Storage provides a persistent, CDN-backed object store that is a direct drop-in replacement.
+The app uses Supabase Storage for member photo uploads. This provides a persistent, CDN-backed object store that scales automatically.
 
 ---
 
 ## Step 1 — Create the storage bucket
 
-### Via Supabase Studio
+The storage bucket is created automatically via migration: `supabase/migrations/20250611000001_storage_setup.sql`
+
+### Manual Setup (if needed)
 
 1. Open your project → **Storage**
 2. Click **New bucket**
@@ -48,21 +50,22 @@ CREATE POLICY "auth_delete_photos"
 ## Step 2 — Install the Supabase client (if not already done)
 
 ```bash
-pnpm --filter @workspace/api-server add @supabase/supabase-js
+pnpm --filter backend add @supabase/supabase-js
 ```
 
 ---
 
-## Step 3 — Replace the upload route
+## Step 3 — Upload Route Implementation
 
-Replace `artifacts/api-server/src/routes/uploads.ts` with the Supabase Storage version:
+The upload route is already implemented in `backend/src/routes/uploads.ts` and configured to use Supabase Storage:
 
 ```typescript
-// artifacts/api-server/src/routes/uploads.ts (Supabase version)
+// backend/src/routes/uploads.ts
 import { Router } from "express";
 import multer from "multer";
 import { supabaseAdmin } from "../lib/supabase";
 import { env } from "../lib/env";
+import { logger } from "../lib/logger";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -85,22 +88,29 @@ router.post("/upload/photo", upload.single("photo"), async (req, res) => {
   const filename = `photos/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
   const { error } = await supabaseAdmin.storage
-    .from(env.STORAGE_BUCKET)
+    .from("member-photos")
     .upload(filename, req.file.buffer, {
       contentType: req.file.mimetype,
       upsert: false,
     });
 
   if (error) {
+    logger.error({ error: error.message }, "Photo upload failed");
     res.status(500).json({ status: "error", message: error.message });
     return;
   }
 
   const { data } = supabaseAdmin.storage
-    .from(env.STORAGE_BUCKET)
+    .from("member-photos")
     .getPublicUrl(filename);
 
+  logger.info({ url: data.publicUrl }, "Photo uploaded successfully");
   res.status(201).json({ status: "ok", url: data.publicUrl });
+} catch (err) {
+  const message = err instanceof Error ? err.message : "Unknown error";
+  logger.error({ error: message }, "Photo upload error");
+  res.status(500).json({ status: "error", message });
+}
 });
 
 export default router;
@@ -108,10 +118,12 @@ export default router;
 
 ---
 
-## Step 4 — Add env vars
+## Step 4 — Required Environment Variables
+
+Supabase URL and credentials must be configured in `.env`:
 
 ```env
-STORAGE_BUCKET=member-photos
+# Already configured in backend .env
 SUPABASE_URL=https://<project-ref>.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=<service_role key>
 ```

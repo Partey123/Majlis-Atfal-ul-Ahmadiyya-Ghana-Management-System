@@ -33,7 +33,17 @@ function useActiveNav(location: string) {
 function AvatarButton({ size = "md" }: { size?: "sm" | "md" }) {
   const { theme, toggleTheme } = useAppContext();
   const { user, logout } = useAuth();
-  const initials = user?.username ? user.username.slice(0, 2).toUpperCase() : "MA";
+  
+  // Get initials from email or name
+  const getInitials = () => {
+    if (user?.email) {
+      return user.email.substring(0, 2).toUpperCase();
+    }
+    return "MA";
+  };
+
+  const initials = getInitials();
+  const displayName = user?.email ?? "User";
 
   return (
     <DropdownMenu>
@@ -51,8 +61,8 @@ function AvatarButton({ size = "md" }: { size?: "sm" | "md" }) {
       <DropdownMenuContent align="end" className="w-48">
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col">
-            <span className="font-semibold text-sm">{user?.username ?? "Admin"}</span>
-            <span className="text-xs text-muted-foreground">{user?.role ?? "administrator"}</span>
+            <span className="font-semibold text-sm truncate">{displayName}</span>
+            <span className="text-xs text-muted-foreground">Administrator</span>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />

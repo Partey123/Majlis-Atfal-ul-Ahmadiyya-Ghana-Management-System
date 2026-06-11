@@ -1,18 +1,14 @@
 import type { Request, Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
-import { env } from "../lib/env";
+import { supabaseAdmin } from "../lib/supabase";
+import { logger } from "../lib/logger";
 
-const COOKIE_NAME = "atfal_session";
-
-export function requireAuth(req: Request, res: Response, next: NextFunction) {
+export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (req.path === "/healthz") {
     next();
     return;
   }
 
-  const token =
-    req.cookies?.[COOKIE_NAME] ??
-    req.headers.authorization?.replace("Bearer ", "");
+  const token = req.headers.authorization?.replace("Bearer ", "");
 
   if (!token) {
     res.status(401).json({ error: "Authentication required" });
@@ -20,11 +16,23 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   }
 
   try {
-    const user = jwt.verify(token, env.JWT_SECRET) as { username: string; role: string };
+    // Verify JWT token using Supabase
+    const {
+      data: { user },
+      error,
+    } = await supabaseAdmin.auth.getUser(token);
+
+    if (error || !user) {
+      logger.error({ error }, "Auth verification failed");
+      res.status(401).json({ error: "Invalid or expired token" });
+      return;
+    }
+
+    // Attach user to request
     (req as Request & { user: typeof user }).user = user;
     next();
-  } catch {
-    res.clearCookie(COOKIE_NAME);
-    res.status(401).json({ error: "Invalid or expired session" });
+  } catch (err) {
+    logger.error({ err }, "Auth middleware error");
+    res.status(401).json({ error: "Authentication failed" });
   }
 }

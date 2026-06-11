@@ -16,30 +16,20 @@ const features = [
 ];
 
 export default function Login() {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { setUser } = useAuth();
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ username, password }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        toast.error((data as { error?: string }).error ?? "Invalid credentials");
-        return;
-      }
-      const user = await res.json();
-      setUser(user);
-    } catch {
-      toast.error("Unable to sign in. Please try again.");
+      await login(email, password);
+      toast.success("Signed in successfully");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Invalid credentials";
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -135,14 +125,14 @@ export default function Login() {
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-sm font-medium">Username</Label>
+              <Label htmlFor="email" className="text-sm font-medium">Email</Label>
               <Input
-                id="username"
-                type="text"
-                autoComplete="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter your username"
+                id="email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your.email@example.com"
                 required
                 disabled={loading}
                 className="h-10"

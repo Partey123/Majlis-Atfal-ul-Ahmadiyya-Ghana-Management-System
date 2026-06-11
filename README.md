@@ -19,7 +19,7 @@ A full-stack member management system for tracking Atfal members, location hiera
 - [Wing Assignment Logic](#wing-assignment-logic)
 - [Deployment](#deployment)
 - [Supabase Migration](#supabase-migration)
-- [Scripts](#scripts)
+- [Commands](#commands)
 
 ---
 
@@ -56,32 +56,72 @@ This application manages:
 
 ```
 .
-├── artifacts/
-│   ├── atfal-ghana/          # React frontend (Vite, port 5000)
-│   │   └── src/
-│   │       ├── components/
-│   │       │   ├── ErrorBoundary.tsx   # React error boundary
-│   │       │   └── layout/AppLayout.tsx
-│   │       └── App.tsx
-│   ├── api-server/           # Express REST API (port 3000)
-│   │   └── src/
-│   │       ├── lib/
-│   │       │   ├── env.ts      # Boot-time env validation (Zod)
-│   │       │   └── logger.ts   # Pino logger
-│   │       ├── middlewares/
-│   │       │   └── errorHandler.ts  # Global error handler
-│   │       └── routes/
-│   │           └── uploads.ts  # Photo upload endpoint
-│   └── mockup-sandbox/       # UI component sandbox (development only)
+├── backend/                  # Express REST API (port 3000)
+│   ├── src/
+│   │   ├── app.ts
+│   │   ├── index.ts
+│   │   ├── lib/
+│   │   │   ├── env.ts          # Boot-time env validation (Zod)
+│   │   │   ├── logger.ts       # Pino logger
+│   │   │   └── supabase.ts     # Supabase clients
+│   │   ├── middlewares/
+│   │   │   ├── errorHandler.ts # Global error handler
+│   │   │   └── requireAuth.ts  # JWT verification
+│   │   └── routes/
+│   │       ├── auth.ts         # Authentication endpoints
+│   │       ├── members.ts      # Members CRUD
+│   │       ├── graduations.ts  # Graduations CRUD
+│   │       ├── locations.ts    # Locations endpoints
+│   │       ├── analytics.ts    # Analytics endpoints
+│   │       ├── uploads.ts      # Photo upload to Supabase Storage
+│   │       ├── health.ts       # Health check
+│   │       └── index.ts        # Route aggregation
+│   ├── package.json
+│   └── tsconfig.json
+├── frontend/                 # React frontend (Vite, port 5000)
+│   ├── src/
+│   │   ├── App.tsx
+│   │   ├── main.tsx
+│   │   ├── context/
+│   │   │   ├── AppContext.tsx      # Theme + UI state
+│   │   │   └── AuthContext.tsx     # Supabase Auth state
+│   │   ├── components/
+│   │   │   ├── ErrorBoundary.tsx
+│   │   │   ├── layout/AppLayout.tsx
+│   │   │   ├── ui/                 # shadcn/ui components
+│   │   │   ├── forms/
+│   │   │   ├── members/
+│   │   │   └── filters/
+│   │   ├── pages/
+│   │   │   ├── Dashboard.tsx
+│   │   │   ├── Members.tsx
+│   │   │   ├── Graduations.tsx
+│   │   │   ├── Analytics.tsx
+│   │   │   ├── Locations.tsx
+│   │   │   └── Login.tsx
+│   │   ├── hooks/
+│   │   │   ├── useAuth.ts
+│   │   │   ├── useDebounce.ts
+│   │   │   ├── useLocationCascade.ts
+│   │   │   ├── useWingCalc.ts
+│   │   │   └── use-mobile.tsx
+│   │   └── lib/
+│   │       └── utils.ts
+│   ├── package.json
+│   └── tsconfig.json
 ├── lib/
 │   ├── db/                   # Drizzle schema + database client
-│   │   └── src/schema/
-│   │       └── members.ts    # Members table + 10 performance indexes
+│   │   ├── src/
+│   │   │   └── schema/
+│   │   │       └── members.ts    # Members + related tables (10 performance indexes)
+│   │   ├── package.json
+│   │   └── tsconfig.json
 │   ├── api-spec/             # OpenAPI 3.1 spec (openapi.yaml) + Orval config
 │   ├── api-zod/              # Zod schemas generated from OpenAPI spec
 │   └── api-client-react/     # TanStack Query hooks generated from OpenAPI spec
 ├── supabase/
-│   ├── docs/                 # Full Supabase migration documentation
+│   ├── config.toml           # Supabase local config
+│   ├── docs/                 # Supabase documentation
 │   │   ├── README.md
 │   │   ├── local-setup.md
 │   │   ├── schema-migration.md
@@ -90,12 +130,18 @@ This application manages:
 │   │   ├── backend-migration.md
 │   │   ├── hosting.md
 │   │   └── environment-variables.md
-│   └── migrations/           # SQL migration files
-├── scripts/
-│   └── post-merge.sh         # Runs after branch merges (install + db push)
+│   └── migrations/           # Database migrations
+│       ├── 0001_remove_position.sql
+│       ├── 20250611000000_initial_schema.sql
+│       └── 20250611000001_storage_setup.sql
 ├── .env.example              # Environment variable template
+├── .env.local                # Local development (git-ignored)
 ├── pnpm-workspace.yaml       # Workspace + catalog dependency versions
-└── package.json              # Root scripts (build, typecheck)
+├── pnpm-lock.yaml            # Dependency lock file
+├── tsconfig.base.json        # Base TypeScript config
+├── tsconfig.json             # Root TypeScript config
+├── package.json              # Root scripts (build, typecheck)
+└── SUPABASE_CONFIG_COMPLETE.md  # Supabase setup documentation
 ```
 
 ### Key packages
@@ -106,8 +152,8 @@ This application manages:
 | `lib/api-spec` | `@workspace/api-spec` | OpenAPI spec and Orval codegen config |
 | `lib/api-zod` | `@workspace/api-zod` | Server-side Zod validators (generated) |
 | `lib/api-client-react` | `@workspace/api-client-react` | React Query hooks (generated) |
-| `artifacts/api-server` | `@workspace/api-server` | Express REST API server |
-| `artifacts/atfal-ghana` | `@workspace/atfal-ghana` | React frontend |
+| `backend` | `@workspace/backend` | Express REST API server |
+| `frontend` | `@workspace/frontend` | React frontend application |
 
 ---
 
@@ -352,7 +398,7 @@ The project is configured for **Replit Autoscale** deployment out of the box.
 
 ### Environment
 
-Set `DATABASE_URL` and `ALLOWED_ORIGIN` (your frontend domain) as secrets in your deployment environment.
+Set `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `ALLOWED_ORIGIN` (your frontend domain) as secrets in your deployment environment.
 
 ### Build
 
@@ -360,17 +406,23 @@ Set `DATABASE_URL` and `ALLOWED_ORIGIN` (your frontend domain) as secrets in you
 pnpm run build
 ```
 
-- Frontend → `artifacts/atfal-ghana/dist/public/`
-- API server → `artifacts/api-server/dist/index.mjs` (bundled via esbuild)
+- Frontend → `frontend/dist/`
+- Backend → Built automatically during deployment (depends on your hosting platform)
 
-### Production start
+### Production Start
 
+**Backend (API Server):**
 ```bash
-# API server
-PORT=3000 ALLOWED_ORIGIN=https://yourdomain.com node --enable-source-maps artifacts/api-server/dist/index.mjs
+PORT=3000 node backend/dist/index.mjs
+```
 
-# Frontend static files (serve from a CDN or use the Vite preview server)
-PORT=5000 BASE_PATH=/ pnpm --filter @workspace/atfal-ghana run serve
+**Frontend (Static Files):**
+```bash
+# Serve from a CDN or static host
+PORT=5000 pnpm --filter frontend run serve
+
+# Or with your own web server
+npx serve -s frontend/dist -l 5000
 ```
 
 ---
@@ -392,18 +444,19 @@ The `supabase/docs/` folder contains a complete guide for migrating from Replit'
 
 ---
 
-## Scripts
+## Commands
 
 | Command | Description |
 |---|---|
 | `pnpm install` | Install all workspace dependencies |
 | `pnpm run build` | Typecheck + build all packages |
-| `pnpm run typecheck` | Type-check all packages |
-| `pnpm --filter @workspace/db run push` | Apply schema to database |
-| `pnpm --filter @workspace/db run push-force` | Force-apply schema (no prompts) |
-| `pnpm --filter @workspace/api-server run dev` | Start API server in dev mode |
-| `pnpm --filter @workspace/atfal-ghana run dev` | Start frontend in dev mode |
-| `pnpm --filter @workspace/api-spec run codegen` | Regenerate API client + validators from OpenAPI spec |
+| `pnpm run typecheck` | Type-check frontend and backend |
+| `pnpm --filter backend run dev` | Start API server in dev mode (port 3000) |
+| `pnpm --filter frontend run dev` | Start frontend in dev mode (port 5000) |
+| `pnpm --filter lib/api-spec run codegen` | Regenerate API client + validators from OpenAPI spec |
+| `supabase start` | Start local Supabase stack |
+| `supabase db push` | Apply migrations to database |
+| `supabase logs --tail` | View real-time Supabase logs |
 
 ---
 
